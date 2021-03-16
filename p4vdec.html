@@ -72,7 +72,8 @@ function extractFrames() {
     var tmpUnicode = new Uint16Array(numBits / 16);
     var tmpAscii = new Uint8Array(numBits / 8);
     var wp = 0, v = 0;
-    for(var y=4; y < h; y += 16)
+    var ymax = (state == 0) ? 40 : h;
+    for(var y=4; y < ymax; y += 16)
     {
         for(var x=4; x < w; x += 16)
         {
@@ -120,7 +121,7 @@ function extractFrames() {
 
     prog.innerHTML = "Processing " + srcPath.name + " : " + ~~(this.currentTime / this.duration * 100) + "%";
     if (this.currentTime < this.duration) {
-      this.currentTime += 1.0 / 30.0;
+      this.currentTime += (state == 0) ? (1.0 / 20.0) : (1.0 / 30.0);
     }
     else
     {
