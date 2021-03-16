@@ -14,15 +14,24 @@ function extractFrames() {
   var canvas = document.createElement('canvas');
   var ctx = canvas.getContext('2d');
   var pro = document.querySelector('#progress');
+  var prev = document.querySelector('#preview');
+  var log = document.querySelector('#log');
+  var text = document.querySelector('#text');
   var result = [], state = 0, filename="";
 
   function initCanvas(e) {
     canvas.width = this.videoWidth;
     canvas.height = this.videoHeight;
     result = [];
-    document.body.appendChild(canvas);
-    document.querySelector('#result').innerHTML="";
+    log.innerHTML = "started.<br>";
   }
+
+  function term() {
+    URL.revokeObjectURL(video.src);
+    document.querySelector('input').value = "";
+    log.innerHTML += "done.<br>";
+  }
+
 
   function save(filename) {
     const link = document.createElement('a');
@@ -46,6 +55,7 @@ function extractFrames() {
         link.setAttribute('href', url);
         link.setAttribute('download', filename+".txt");
         link.click();
+        log.innerHTML += "Saved : " + filename + "<br>";
         URL.revokeObjectURL(url)
     }
   }
@@ -56,8 +66,9 @@ function extractFrames() {
     var w = this.videoWidth, h = this.videoHeight
     var data = ctx.getImageData(0, 0, w, h).data;
 
-    var tmpBinary = new Uint16Array((h >> 4) * (w >> 4) * 4 / 16);
-    var tmpHeader = new Uint8Array(64);
+    var numBits = (h >> 3) * (w >> 3);
+    var tmpUnicode = new Uint16Array(numBits / 16);
+    var tmpAscii = new Uint8Array(numBits / 8);
     var wp = 0, v = 0;
     for(var y=4; y < h; y += 16)
     {
@@ -73,16 +84,16 @@ function extractFrames() {
             if ((wp & 3) == 0)
             {
               var p = wp >> 2;
-              tmpBinary[p] = v;
-              if (p<64) tmpHeader[p] = v;
+              tmpUnicode[p] = v;
+              tmpAscii[p] = v;
               v = 0;
             }
         }
     }
 
-    tmpBinary = tmpBinary.filter(x => (x>0));
-    tmpHeader = tmpHeader.filter(x => (x>0));
-    var hstr = new TextDecoder().decode(tmpHeader);
+    tmpUnicode = tmpUnicode.filter(x => (x>0));
+    tmpAscii = tmpAscii.filter(x => (x>0));
+    var hstr = new TextDecoder().decode(tmpAscii);
     switch(state)
     {
       case 0:
@@ -91,6 +102,7 @@ function extractFrames() {
           state = 1;
           var args = hstr.split(":");
           filename = args[args.length - 1];
+          log.innerHTML += "Detect : " + filename + "<br>";
         } 
         break;
         
@@ -98,19 +110,19 @@ function extractFrames() {
         if (hstr.startsWith("START:")) break;
         if (hstr.startsWith("END:")) { save(filename); state = 0; break; }
 
-        if (result[result.length - 1] != tmpBinary) {
-          result.push(tmpBinary);
+        if (result[result.length - 1] != tmpUnicode) {
+          result.push(tmpUnicode);
         }
         break;
     }
 
-    pro.innerHTML = result.length + " : " + this.currentTime + " / " + this.duration;
+    pro.innerHTML = "Progress : " + ~~(this.currentTime / this.duration * 100) + "%";
     if (this.currentTime < this.duration) {
       this.currentTime += 1.0 / 30.0;
     }
     else
     {
-      document.body.removeChild(canvas);
+      term();
     }
   }
   
@@ -129,6 +141,9 @@ P4VE を使って作成した動画を選択してください。変換はオフ
 Select a video that has made by P4VE. The conversion is done offline.<br>
 </p>
 <input type="file" accept="video/*" />
-<p id="progress"></p>
+<pre id="progress"></pre>
+<pre id="log"></pre>
+<pre id="preview"></pre>
+<pre id="text"></pre>
 </body>
 </html>
