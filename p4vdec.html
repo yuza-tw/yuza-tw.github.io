@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html charset="utf-8">
+<head>
+<title>P4VE video decoder</title>
+<script>
+
+function init()
+{
+  document.querySelector('input').addEventListener('change', extractFrames, false);
+}
+
+function extractFrames() {
+  var video = document.createElement('video');
+  var canvas = document.createElement('canvas');
+  var ctx = canvas.getContext('2d');
+  var pro = document.querySelector('#progress');
+  var result = [], state = 0, filename="";
+
+  function initCanvas(e) {
+    canvas.width = this.videoWidth;
+    canvas.height = this.videoHeight;
+    result = [];
+    document.body.appendChild(canvas);
+    document.querySelector('#result').innerHTML="";
+  }
+
+  function save(filename) {
+    const link = document.createElement('a');
+    if (link.download !== undefined) {
+        function concatBuffers(bufs) {
+            var offset = 0, bytes = 0;
+            var bufs2 = bufs.map(function(buf, total) {
+                bytes += buf.byteLength;
+                return buf;
+            });
+            var buffer = new ArrayBuffer(bytes);
+            var store = new Uint8Array(buffer);
+            bufs2.forEach(function(buf){
+                store.set(new Uint8Array(buf.buffer||buf, buf.byteOffset), offset);
+                offset += buf.byteLength;
+            });
+            return buffer;
+        }
+        const blob = new Blob([concatBuffers(result)]);
+        var url = URL.createObjectURL(blob)
+        link.setAttribute('href', url);
+        link.setAttribute('download', filename+".txt");
+        link.click();
+        URL.revokeObjectURL(url)
+    }
+    document.body.removeChild(canvas);
+  }
+  
+  function drawFrame(e) {
+    ctx.drawImage(this, 0, 0);
+
+    var w = this.videoWidth, h = this.videoHeight
+    var data = ctx.getImageData(0, 0, w, h).data;
+
+    var tmpBinary = new Uint16Array((h >> 4) * (w >> 4) * 4 / 16);
+    var tmpHeader = new Uint8Array(64);
+    var wp = 0, v = 0;
+    for(var y=4; y < h; y += 16)
+    {
+        for(var x=4; x < w; x += 16)
+        {
+            var i = (y * w * 4 + x * 4);
+            var bit0 = (data[i] > 127) ? 1 : 0;
+            var bit1 = (data[i + 32] > 127) ? 2 : 0;
+            var bit2 = (data[i + 32 * w] > 127) ? 4 : 0;
+            var bit3 = (data[i + 32 * w + 32] > 127) ? 8 : 0;
+            v = (v >> 4) | ((bit0 | bit1 | bit2 | bit3) << 12);
+            wp++;
+            if ((wp & 3) == 0)
+            {
+              var p = wp >> 2;
+              tmpBinary[p] = v;
+              if (p<64) tmpHeader[p] = v;
+              v = 0;
+            }
+        }
+    }
+
+    tmpBinary = tmpBinary.filter(x => (x>0));
+    tmpHeader = tmpHeader.filter(x => (x>0));
+    var hstr = new TextDecoder().decode(tmpHeader);
+    switch(state)
+    {
+      case 0:
+        if (hstr.startsWith("START:"))
+        {
+          state = 1;
+          var args = hstr.split(":");
+          filename = args[args.length - 1];
+        } 
+        break;
+        
+      case 1:
+        if (hstr.startsWith("START:")) break;
+        if (hstr.startsWith("END:")) { save(filename); state = 0; break; }
+
+        if (result[result.length - 1] != tmpBinary) {
+          result.push(tmpBinary);
+        }
+        break;
+    }
+
+    pro.innerHTML = result.length + " : " + this.currentTime + " / " + this.duration;
+    if (this.currentTime < this.duration) {
+      this.currentTime += 1.0 / 30.0;
+    }
+  }
+  
+  video.muted = true;
+  video.addEventListener('loadedmetadata', initCanvas, false);
+  video.addEventListener('timeupdate', drawFrame, false);
+  video.src = URL.createObjectURL(this.files[0]);
+  video.currentTime = 1.0 / 60.0;
+}
+</script>
+</head>
+
+<body onload="init()">
+<p>
+P4VE を使って作成した動画を選択してください。変換はオフラインで行われます。<br>
+Select a video that has made by P4VE. The conversion is done offline.<br>
+</p>
+<input type="file" accept="video/*" />
+<p id="progress"></p>
+</body>
+</html>
