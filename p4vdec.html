@@ -13,11 +13,15 @@ function extractFrames() {
   var video = document.createElement('video');
   var canvas = document.createElement('canvas');
   var ctx = canvas.getContext('2d');
-  var pro = document.querySelector('#progress');
-  var prev = document.querySelector('#preview');
-  var log = document.querySelector('#log');
-  var text = document.querySelector('#text');
-  var result = [], state = 0, filename="";
+  var prog = document.createElement('pre');
+  var log = document.createElement('pre');
+  var result = [], state = 0, filename="", srcPath = this.files[0];
+
+  var output = document.querySelector('#output');
+  output.appendChild(document.createElement('hr'));
+  output.appendChild(prog);
+  output.appendChild(log);
+  log.style = "margin-left:2em;background-color:#eee;"
 
   function initCanvas(e) {
     canvas.width = this.videoWidth;
@@ -27,8 +31,6 @@ function extractFrames() {
   }
 
   function term() {
-    URL.revokeObjectURL(video.src);
-    document.querySelector('input').value = "";
     log.innerHTML += "done.<br>";
   }
 
@@ -116,7 +118,7 @@ function extractFrames() {
         break;
     }
 
-    pro.innerHTML = "Progress : " + ~~(this.currentTime / this.duration * 100) + "%";
+    prog.innerHTML = "Processing " + srcPath.name + " : " + ~~(this.currentTime / this.duration * 100) + "%";
     if (this.currentTime < this.duration) {
       this.currentTime += 1.0 / 30.0;
     }
@@ -129,7 +131,7 @@ function extractFrames() {
   video.muted = true;
   video.addEventListener('loadedmetadata', initCanvas, false);
   video.addEventListener('timeupdate', drawFrame, false);
-  video.src = URL.createObjectURL(this.files[0]);
+  video.src = URL.createObjectURL(srcPath);
   video.currentTime = 1.0 / 60.0;
 }
 </script>
@@ -138,12 +140,13 @@ function extractFrames() {
 <body onload="init()">
 <p>
 P4VE を使って作成した動画を選択してください。変換はオフラインで行われます。<br>
-Select a video that has made by P4VE. The conversion is done offline.<br>
+変換後のテキストは UTF-16(LE) です。プチコン固有の文字は崩れます。<br>
 </p>
-<input type="file" accept="video/*" />
-<pre id="progress"></pre>
-<pre id="log"></pre>
-<pre id="preview"></pre>
-<pre id="text"></pre>
+<p>
+Select a video that has made by P4VE. The conversion is done offline.<br>
+Converted text is UTF-16(LE). Petitcom-dependent characters will not be shown.<br>
+</p>
+<p><input type="file" accept="video/*"/></p>
+<div id="output"></div>
 </body>
 </html>
