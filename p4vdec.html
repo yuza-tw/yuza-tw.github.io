@@ -62,6 +62,17 @@ function extractFrames() {
     }
   }
   
+  function getMatchRate(a, b)
+  {
+    var n = Math.min(a.length, b.length), m = 0;
+    for(var i=0; i < n; i++)
+    {
+      if (a[i] == b[i]) m++;
+    }
+    console.log(a.length, b.length, m, n);
+    return m / n;
+  }
+
   function drawFrame(e) {
     ctx.drawImage(this, 0, 0);
 
@@ -112,16 +123,17 @@ function extractFrames() {
       case 1:
         if (hstr.startsWith("START:")) break;
         if (hstr.startsWith("END:")) { save(filename); state = 0; break; }
-
-        if (result[result.length - 1] != tmpUnicode) {
-          result.push(tmpUnicode);
+        if (tmpUnicode.length > 0) {
+          if (result.length == 0 || getMatchRate(result[result.length - 1], tmpUnicode) < 0.99) {
+            result.push(tmpUnicode);
+          }
         }
         break;
     }
 
     prog.innerHTML = "Processing " + srcPath.name + " : " + ~~(this.currentTime / this.duration * 100) + "%";
     if (this.currentTime < this.duration) {
-      this.currentTime += (state == 0) ? (1.0 / 20.0) : (1.0 / 30.0);
+      this.currentTime += (state == 0) ? (1.0 / 20.0) : (1.0 / 32.0);
     }
     else
     {
