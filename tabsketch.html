@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html><head><title>Tabsketch</title>
+<script src="https://cdn.rawgit.com/magicien/undo-canvas/v0.1.3/undo-canvas.js"></script>
+<script>
+window.addEventListener('load', () => {
+    var mainCanvas = document.getElementById('mainCanvas');
+    mainCanvas.width = 2048;
+    mainCanvas.height = 2048;
+    mainCanvas.style.cursor = 'crosshair';
+    mainCanvas.oncontextmenu = () => !drew;
+
+    var context = mainCanvas.getContext('2d', { willReadFrequently: true });
+    context.lineCap = 'round';
+    UndoCanvas.enableUndo(context);
+
+    var ox = -1, oy = -1, op = 0, vx = 0, vy = 0, tx = 0, ty = 0, vp = 0;
+    var drew = false, inStroke = false, inGrab = false, mode = 0;
+
+    function pv(v, g, c, o) {
+        var d = 1.0 + o;
+        return (v + (g - c) * (o * o)) / (d * d);
+    }
+
+    function doGrab(e) {
+        if (e.type == 'pointerdown')
+            mainCanvas.style.cursor = 'grabbing';
+        if (e.type == 'pointerup')
+            mainCanvas.style.cursor = 'grab';
+        if (e.pressure == 0)
+            return;
+        var zoom = window.devicePixelRatio || window.screen.availWidth / document.documentElement.clientWidth;
+        window.scrollBy(-e.movementX / zoom, -e.movementY / zoom);
+    }
+
+    function processPointerEvent(e) {
+        e.preventDefault();
+        if (inGrab) return doGrab(e);
+
+        var p = e.pressure;
+        if (p == 0.0) {
+            if (!inStroke) return;
+        } else {
+            tx = e.offsetX;
+            ty = e.offsetY;
+        }
+
+        if (e.type == 'pointerdown') {
+            context.putTag();
+            drew = false;
+            inStroke = true;
+            ox = tx;
+            oy = ty;
+            op = vx = vy = 0;
+            mode = (e.buttons == 2);
+        }
+
+        if (ox==tx && oy==ty)
+            return;
+
+        drew = true;
+
+        var omega = (vx*(tx-ox)+vy*(ty-oy) < 0) ? 0.2 : 0.1;
+        var w = mode ? 48 : 12;
+        var c = mode ? `white` : `black`;
+
+        for (i=0; i<10; i++) {
+            context.beginPath();
+            context.lineWidth = op * w;
+            context.strokeStyle = c;
+            context.moveTo(ox, oy);
+            ox += vx = pv(vx, tx, ox, omega);
+            oy += vy = pv(vy, ty, oy, omega);
+            op += vp = pv(vp, p, op, omega);
+            context.lineTo(ox, oy);
+            context.stroke();
+        }
+
+        inStroke = (op >= 0.01);
+    }
+
+    mainCanvas.addEventListener('pointerdown', processPointerEvent)
+    mainCanvas.addEventListener('pointermove', processPointerEvent)
+    mainCanvas.addEventListener('pointerup', processPointerEvent)
+
+    document.onkeydown = (e) => { 
+        if (e.ctrlKey && e.key == 'z') context.undoTag();
+        if (e.ctrlKey && e.key == 'y') context.redoTag();
+        if (e.key == ' ') {
+            if (!inGrab) {
+                mainCanvas.style.cursor = 'grab';
+                inGrab = true;
+            }
+            e.preventDefault();
+        }
+    }
+
+    document.onkeyup = (e) => { 
+        if (e.key == ' ') {
+            mainCanvas.style.cursor = 'crosshair';
+            inGrab = false;
+            e.preventDefault();
+        }
+    }
+})
+</script>
+</head>
+<body style="margin:0px"><canvas id="mainCanvas" style="touch-action:none"></canvas></body>
+</html>
