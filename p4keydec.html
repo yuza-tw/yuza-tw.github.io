@@ -10,7 +10,7 @@
 <button id="get-cameras">デバイス一覧取得</button> |
 <button id="start-capture">キャプチャ開始</button>
 <button id="stop-capture">停止</button>
-<button id="copy-keys">全キーのコピー</button>
+<button id="copy-keys">キーのコピー</button>
 <a href="https://twitter.com/__yuza__" target="_blank" style="text-decoration:none; color:darkblue; float:right;">@__yuza__</a>
 </div>
 <hr size="1">
@@ -30,15 +30,17 @@ async function recognize(keyUrl, brdUrl) {
 	procCnt++;
 	const result = await Tesseract.recognize(keyUrl, 'eng', {
 		langPath: 'https://raw.githubusercontent.com/naptha/tessdata/gh-pages/4.0.0_best/',
-		corePath: 'https://unpkg.com/tesseract.js-core@v2.1.0/tesseract-core.wasm.js'
+		corePath: 'https://unpkg.com/tesseract.js-core@v2.1.0/tesseract-core.wasm.js',
+		tessedit_char_whitelist: '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ',
+		tessedit_pageseg_mode: '8',
 	});
 	procCnt--;
 
 	var keyText = result.data.text.trim();
 	console.log(result.data);
 	if (keyText == "") return;
-	keyText = keyText.replace(')','J');
-	if (keyText.length <= 4) return;
+	keyText = keyText.replace(')','J').replace('-','').replace(' ','');
+//	if (keyText.length <= 4) return;
 	if (keyText in results) return;
 	results[keyText] = true;
 
@@ -47,8 +49,10 @@ async function recognize(keyUrl, brdUrl) {
 	var c_k = document.createElement('td');
 	var c_b = document.createElement('td');
 	var brdImg = document.createElement('img');
+	var txt = document.createTextNode(keyText);
+	c_k.onclick = onClickText;
 	brdImg.src = brdUrl;
-	c_k.appendChild(document.createTextNode(keyText));
+	c_k.appendChild(txt);
 	c_b.appendChild(brdImg);
 	tr.appendChild(c_k);
 	tr.appendChild(c_b);
@@ -71,8 +75,21 @@ videoElement.onloadedmetadata = function (e) {
 	console.log(videoElement.width, videoElement.height);
 };
 
+function onClickText(e) {
+	var k = e.target.innerText;
+	var v = (results[k] == false);
+	results[k] = v;
+	e.target.style.color = v ? "black" : "red";
+}
+
 function copyKeys() {
-	navigator.clipboard.writeText(Object.keys(results).join('\n'));
+	var active = []
+	for (var k in results) {
+		if (results[k] == true) {
+			active.push(k);	
+		}
+	}
+	navigator.clipboard.writeText(active.join('\n'));
 }
 
 function startCapture() {
@@ -114,7 +131,7 @@ function onTimeUpdate(e) {
 
 	for(var i=0; i<4; i++)
 	{
-		var kx = 270, ky = 164 + 144 * i, kw = 136, kh =  20;
+		var kx = 274, ky = 164 + 144 * i, kw = 136, kh =  20;
 		var bx = 68,  by =  59 + 144 * i, bw = 604, bh = 128;
 		keyCtx.drawImage(vcopy, kx,ky,kw,kh, 0,0,kw,kh);
 		brdCtx.drawImage(vcopy, bx,by,bw,bh, 0,0,bw,bh);
