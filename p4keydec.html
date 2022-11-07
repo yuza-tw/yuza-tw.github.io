@@ -18,7 +18,7 @@
 <video id="video" width="1280" height="720" style="visibility:hidden; float:right;" autoplay muted></video>
 </div>
 <table id="log" border="1" style="border-collapse: collapse; margin-left:10px"><tr><th>key</th><th>board</th></tr></table>
-<canvas id="key" width="136" height="20" style="visibility:hidden;"></canvas>
+<canvas id="key" width="272" height="40" style="visibility:hidden;"></canvas>
 <canvas id="brd" width="604" height="128" style="visibility:hidden;"></canvas>
 
 <script>
@@ -42,23 +42,16 @@ async function recognize(keyUrl, brdUrl) {
 	    tessedit_char_whitelist: '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ',
 	    tessedit_pageseg_mode: '13', // PSM.RAW_LINE
 	});
-
 	const result = await worker.recognize(keyUrl);
-    await worker.terminate();
-/*
-	const result = await Tesseract.recognize(keyUrl, 'eng', {
-		langPath: 'https://raw.githubusercontent.com/naptha/tessdata/gh-pages/4.0.0_best/',
-		corePath: 'https://unpkg.com/tesseract.js-core@3.0.2/tesseract-core.wasm.js',
-		tessedit_char_whitelist: '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ',
-		tessedit_pageseg_mode: '8',
-	});
-*/
+  await worker.terminate();
+
 	procCnt--;
 
 	var keyText = result.data.text.trim().replace(' ','');
 //	console.log(result.data);
 	if (keyText == "") return;
 	if (keyText.length <= 4) return;
+	if (keyText[0] == 'A') keyText = "4" + keyText.substring(1);
 	if (keyText in results) return;
 	results[keyText] = true;
 
@@ -66,7 +59,9 @@ async function recognize(keyUrl, brdUrl) {
 	var tr = document.createElement('tr');
 	var c_k = document.createElement('td');
 	var c_b = document.createElement('td');
+	var keyImg = document.createElement('img');
 	var brdImg = document.createElement('img');
+	var ki = document.createElement('p');
 	var kp = document.createElement('p');
 	var txtOrg = document.createTextNode(keyText);
 	var txt = document.createElement('input');
@@ -75,9 +70,12 @@ async function recognize(keyUrl, brdUrl) {
 	txt.oldvalue = keyText;
 	txt.oninput = onTypedText;
 	kp.onclick = onClickText;
-	c_k.style.fontSize = "200%";
+	c_k.style.fontSize = "250%";
+	keyImg.src = keyUrl;
 	brdImg.src = brdUrl;
+	ki.appendChild(keyImg);
 	kp.appendChild(txtOrg);
+	c_k.appendChild(ki);
 	c_k.appendChild(kp);
 	c_k.appendChild(txt);
 	c_b.appendChild(brdImg);
@@ -145,11 +143,11 @@ function preFilter(ctx, w, h) {
 	const imageData = ctx.getImageData(0, 0, w, h);
 	var data = imageData.data;
 	for (let i = 0; i < data.length; i += 4) {
-		var v = 255 - (data[i] - 128) * 3;
+		var v = 240 - (data[i] - 128) * 3;
 		if (v<0) v = 0;
-	  	data[i]   = v;
-	  	data[i+1] = v;
-	  	data[i+2] = v;
+		data[i]   = v;
+		data[i+1] = v;
+		data[i+2] = v;
 	}
 	ctx.putImageData(imageData, 0, 0);
 }
@@ -168,12 +166,11 @@ function onTimeUpdate(e) {
 
 	for(var i=0; i<4; i++)
 	{
-		var kx = 274, ky = 164 + 144 * i, kw = 136, kh =  20;
+		var kx = 278, ky = 164 + 144 * i, kw = 136, kh =  20;
 		var bx = 68,  by =  59 + 144 * i, bw = 604, bh = 128;
-		keyCtx.drawImage(vcopy, kx,ky,kw,kh, 0,0,kw,kh);
+		keyCtx.drawImage(vcopy, kx,ky,kw,kh, 0,0,key.width,key.height);
 		brdCtx.drawImage(vcopy, bx,by,bw,bh, 0,0,bw,bh);
-		preFilter(keyCtx, kw, kh);
-		brdCtx.drawImage(key, 0, 0, kw,kh, 460,102,kw,kh);
+		preFilter(keyCtx, key.width, key.height);
 		recognize(key.toDataURL(), brd.toDataURL());
 	}
 }
@@ -210,7 +207,7 @@ function getStream() {
 		video: {deviceId: videoSource ? {exact: videoSource} : undefined}
 	};
 	return navigator.mediaDevices.getUserMedia(constraints).
-    	then(gotStream).catch(handleError);
+		then(gotStream).catch(handleError);
 }
 
 function gotStream(stream) {
