@@ -13,7 +13,7 @@
 <a href="https://twitter.com/__yuza__" target="_blank" style="text-decoration:none; color:darkblue; float:right;">@__yuza__</a>
 </div>
 <hr size="1">
-<video id="video" style="border: 1px solid black; float:right; width:640px; height:360px" autoplay muted></video>
+<video id="video" width="1280" height="720" style="border: 1px solid black; float:right; width:640px; height:360px" autoplay muted></video>
 </div>
 <table id="log" border="1" style="border-collapse: collapse; margin-left:10px"><tr><th>key</th><th>board</th></tr></table>
 <canvas id="key" width="128" height="20" style="visibility:hidden;"></canvas>
@@ -59,8 +59,9 @@ var videoSelect = document.querySelector('select#videoSource');
 
 videoSelect.onchange = getStream;
 videoElement.onloadedmetadata = function (e) {
-	videoElement.width = this.videoWidth;
-	videoElement.height = this.videoHeight;
+//	videoElement.width = this.videoWidth;
+//	videoElement.height = this.videoHeight;
+	console.log(videoElement.width, videoElement.height);
 };
 
 function startCapture() {
