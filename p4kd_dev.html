@@ -42,17 +42,9 @@ async function recognize(keyUrl, brdUrl) {
 	    tessedit_char_whitelist: '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ',
 	    tessedit_pageseg_mode: '13', // PSM.RAW_LINE
 	});
-
 	const result = await worker.recognize(keyUrl);
-    await worker.terminate();
-/*
-	const result = await Tesseract.recognize(keyUrl, 'eng', {
-		langPath: 'https://raw.githubusercontent.com/naptha/tessdata/gh-pages/4.0.0_best/',
-		corePath: 'https://unpkg.com/tesseract.js-core@3.0.2/tesseract-core.wasm.js',
-		tessedit_char_whitelist: '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ',
-		tessedit_pageseg_mode: '8',
-	});
-*/
+  await worker.terminate();
+
 	procCnt--;
 
 	var keyText = result.data.text.trim().replace(' ','');
@@ -173,7 +165,7 @@ function onTimeUpdate(e) {
 		var bx = 68,  by =  59 + 144 * i, bw = 604, bh = 128;
 		keyCtx.drawImage(vcopy, kx,ky,kw,kh, 0,0,key.width,key.height);
 		brdCtx.drawImage(vcopy, bx,by,bw,bh, 0,0,bw,bh);
-		preFilter(keyCtx, kw, kh);
+		preFilter(keyCtx, key.width, key.height);
 		brdCtx.drawImage(key, 0, 0, key.width,key.height, 460,102,kw,kh);
 		recognize(key.toDataURL(), brd.toDataURL());
 	}
