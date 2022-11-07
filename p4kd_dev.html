@@ -59,7 +59,9 @@ async function recognize(keyUrl, brdUrl) {
 	var tr = document.createElement('tr');
 	var c_k = document.createElement('td');
 	var c_b = document.createElement('td');
+	var keyImg = document.createElement('img');
 	var brdImg = document.createElement('img');
+	var ki = document.createElement('p');
 	var kp = document.createElement('p');
 	var txtOrg = document.createTextNode(keyText);
 	var txt = document.createElement('input');
@@ -69,8 +71,11 @@ async function recognize(keyUrl, brdUrl) {
 	txt.oninput = onTypedText;
 	kp.onclick = onClickText;
 	c_k.style.fontSize = "200%";
+	keyImg.src = keyUrl;
 	brdImg.src = brdUrl;
+	ki.appendChild(keyImg);
 	kp.appendChild(txtOrg);
+	c_k.appendChild(ki);
 	c_k.appendChild(kp);
 	c_k.appendChild(txt);
 	c_b.appendChild(brdImg);
