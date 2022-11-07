@@ -1,0 +1,158 @@
+<html>
+<head>
+<script src='https://unpkg.com/tesseract.js@v2.1.0/dist/tesseract.min.js'></script>
+<title>P4 Key Decoder</title>
+</head>
+<body style="margin:0">
+<div style="position:sticky; top:0; background-color:#eee">
+<div style="padding:8px 8px 0px 8px">
+<label for="videoSource">入力デバイス：</label><select id="videoSource"></select>
+<button id="get-cameras">デバイス一覧取得</button> |
+<button id="start-capture">キャプチャ開始</button>
+<button id="stop-capture">停止</button>
+<button id="copy-keys">全キーのコピー</button>
+<a href="https://twitter.com/__yuza__" target="_blank" style="text-decoration:none; color:darkblue; float:right;">@__yuza__</a>
+</div>
+<hr size="1">
+<canvas id="vCopy" width="1280" height="720" style="border: 1px solid black; float:right; width:640px"></canvas>
+<video id="video" width="1280" height="720" style="visibility:hidden; float:right;" autoplay muted></video>
+</div>
+<table id="log" border="1" style="border-collapse: collapse; margin-left:10px"><tr><th>key</th><th>board</th></tr></table>
+<canvas id="key" width="128" height="20" style="visibility:hidden;"></canvas>
+<canvas id="brd" width="604" height="128" style="visibility:hidden;"></canvas>
+
+<script>
+
+var procCnt = 0;
+var results = {};
+
+async function recognize(keyUrl, brdUrl) {
+	procCnt++;
+	const result = await Tesseract.recognize(keyUrl, 'eng', {
+		corePath: 'https://unpkg.com/tesseract.js-core@v2.1.0/tesseract-core.wasm.js'
+	});
+	procCnt--;
+
+	var keyText = result.data.text.trim();
+	console.log(keyText);
+	if (keyText == "") return;
+//	if (keyText[0] != "4") return;
+	if (keyText in results) return;
+	results[keyText] = true;
+
+	var log = document.getElementById('log');
+	var tr = document.createElement('tr');
+	var c_k = document.createElement('td');
+	var c_b = document.createElement('td');
+	var brdImg = document.createElement('img');
+	brdImg.src = brdUrl;
+	c_k.appendChild(document.createTextNode(keyText));
+	c_b.appendChild(brdImg);
+	tr.appendChild(c_k);
+	tr.appendChild(c_b);
+	log.appendChild(tr);
+	window.scrollTo(0, document.body.scrollHeight);
+}
+
+document.getElementById('get-cameras').onclick = getCameras;
+document.getElementById('start-capture').onclick = startCapture;
+document.getElementById('stop-capture').onclick = stopCapture;
+document.getElementById('copy-keys').onclick = copyKeys;
+
+var videoElement = document.querySelector("#video");
+var videoSelect = document.querySelector('select#videoSource');
+
+videoSelect.onchange = getStream;
+videoElement.onloadedmetadata = function (e) {
+	videoElement.width = this.videoWidth;
+	videoElement.height = this.videoHeight;
+	console.log(videoElement.width, videoElement.height);
+};
+
+function copyKeys() {
+	navigator.clipboard.writeText(Object.keys(results).join('\n'));
+}
+
+function startCapture() {
+	document.getElementById('vCopy').style.display = "block";
+	videoElement.srcObject = window.stream;
+	videoElement.ontimeupdate = onTimeUpdate;
+}
+
+function stopCapture() {
+	document.getElementById('vCopy').style.display = "none";
+	videoElement.srcObject = null;
+	videoElement.ontimeupdate = null;
+}
+
+function onTimeUpdate(e) {
+	var video = e.target;
+	var vcopy = document.getElementById('vCopy');
+	vcopy.getContext('2d').drawImage(video,0,0,video.width,video.height, 0,0,vcopy.width,vcopy.height);
+	if (procCnt>0) return;
+
+	var z = video.width / 1280;
+	var key = document.getElementById('key');
+	var brd = document.getElementById('brd');
+	var keyCtx = key.getContext('2d');
+	var brdCtx = brd.getContext('2d');
+
+	for(var i=0; i<4; i++)
+	{
+		var kx = 279, ky = 164 + 144 * i, kw = 128, kh =  20;
+		var bx = 68,  by =  59 + 144 * i, bw = 604, bh = 128;
+		keyCtx.drawImage(video, z*kx,z*ky,z*kw,z*kh, 0,0,kw,kh);
+		brdCtx.drawImage(video, z*bx,z*by,z*bw,z*bh, 0,0,bw,bh);
+		recognize(key.toDataURL(), brd.toDataURL());
+	}
+}
+
+function getCameras() {
+	getStream().then(getDevices).then(gotDevices);
+}
+
+function getDevices() {
+  return navigator.mediaDevices.enumerateDevices();
+}
+
+function gotDevices(deviceInfos) {
+	window.deviceInfos = deviceInfos; // make available to console
+	for (_ in videoSelect.options) { videoSelect.options.remove(0); }
+	console.log('Available input and output devices:', deviceInfos);
+	for (const deviceInfo of deviceInfos) {
+		console.log(deviceInfo);
+		const option = document.createElement('option');
+		option.value = deviceInfo.deviceId;
+		if (deviceInfo.kind === 'videoinput') {
+			option.text = deviceInfo.label || `Camera ${videoSelect.length + 1}`;
+			videoSelect.appendChild(option);
+		}
+	}
+}
+
+function getStream() {
+	if (window.stream) {
+		window.stream.getTracks().forEach(track => { track.stop(); });
+	}
+	const videoSource = videoSelect.value;
+	const constraints = {
+		video: {deviceId: videoSource ? {exact: videoSource} : undefined}
+	};
+	return navigator.mediaDevices.getUserMedia(constraints).
+    	then(gotStream).catch(handleError);
+}
+
+function gotStream(stream) {
+	window.stream = stream; // make stream available to console
+	videoSelect.selectedIndex = [...videoSelect.options].
+		findIndex(option => option.text === stream.getVideoTracks()[0].label);
+}
+
+function handleError(error) {
+  console.error('Error: ', error);
+}
+
+</script>
+
+</body>
+</html>
