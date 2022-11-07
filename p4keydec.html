@@ -87,7 +87,8 @@ function stopCapture() {
 
 function onTimeUpdate(e) {
 	var video = e.target;
-	document.getElementById('vCopy').getContext('2d').drawImage(video,0,0,video.width,video.height);
+	var vcopy = document.getElementById('vCopy');
+	vcopy.getContext('2d').drawImage(video,0,0,video.width,video.height, 0,0,vcopy.width,vcopy.height);
 	if (procCnt>0) return;
 
 	var z = video.width / 1280;
