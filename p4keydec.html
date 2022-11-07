@@ -78,7 +78,7 @@ function onTimeUpdate(e) {
 	if (procCnt>0) return;
 
 	var video = e.target;
-	var z = 1280 / video.width;
+	var z = video.width / 1280;
 	var key = document.getElementById('key');
 	var brd = document.getElementById('brd');
 	var keyCtx = key.getContext('2d');
