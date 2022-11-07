@@ -3,7 +3,7 @@
 <script src='https://unpkg.com/tesseract.js@v2.1.0/dist/tesseract.min.js'></script>
 <title>P4 Key Decoder</title>
 </head>
-<body style="margin:0; font-family:monospace">
+<body style="margin:0;">
 <div style="position:sticky; top:0; background-color:#eee">
 <div style="padding:8px 8px 0px 8px">
 <label for="videoSource">入力デバイス：</label><select id="videoSource"></select>
@@ -66,11 +66,13 @@ async function recognize(keyUrl, brdUrl) {
 	var txtOrg = document.createTextNode(keyText);
 	var txt = document.createElement('input');
 	txt.setAttribute("type", "text");
+	txt.style.fontSize = "140%";
 	txt.value = keyText;
 	txt.oldvalue = keyText;
 	txt.oninput = onTypedText;
 	kp.onclick = onClickText;
-	c_k.style.fontSize = "250%";
+	kp.style.fontSize = "190%";
+	kp.style.paddingLeft = "0.5em";
 	keyImg.src = keyUrl;
 	brdImg.src = brdUrl;
 	ki.appendChild(keyImg);
@@ -142,14 +144,17 @@ function stopCapture() {
 function preFilter(ctx, w, h) {
 	const imageData = ctx.getImageData(0, 0, w, h);
 	var data = imageData.data;
+	var has0 = false;
 	for (let i = 0; i < data.length; i += 4) {
 		var v = 240 - (data[i] - 128) * 3;
-		if (v<0) v = 0;
+		if (v<0) { v = 0; has0 = true; }
 		data[i]   = v;
 		data[i+1] = v;
 		data[i+2] = v;
 	}
 	ctx.putImageData(imageData, 0, 0);
+
+	return has0;
 }
 
 
@@ -170,8 +175,10 @@ function onTimeUpdate(e) {
 		var bx = 68,  by =  59 + 144 * i, bw = 604, bh = 128;
 		keyCtx.drawImage(vcopy, kx,ky,kw,kh, 0,0,key.width,key.height);
 		brdCtx.drawImage(vcopy, bx,by,bw,bh, 0,0,bw,bh);
-		preFilter(keyCtx, key.width, key.height);
-		recognize(key.toDataURL(), brd.toDataURL());
+		if (preFilter(keyCtx, key.width, key.height))
+		{
+			recognize(key.toDataURL(), brd.toDataURL());
+		}
 	}
 }
 
