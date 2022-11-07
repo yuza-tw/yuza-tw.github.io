@@ -18,7 +18,7 @@
 <video id="video" width="1280" height="720" style="visibility:hidden; float:right;" autoplay muted></video>
 </div>
 <table id="log" border="1" style="border-collapse: collapse; margin-left:10px"><tr><th>key</th><th>board</th></tr></table>
-<canvas id="key" width="128" height="20" style="visibility:hidden;"></canvas>
+<canvas id="key" width="136" height="20" style="visibility:hidden;"></canvas>
 <canvas id="brd" width="604" height="128" style="visibility:hidden;"></canvas>
 
 <script>
@@ -29,13 +29,15 @@ var results = {};
 async function recognize(keyUrl, brdUrl) {
 	procCnt++;
 	const result = await Tesseract.recognize(keyUrl, 'eng', {
+		langPath: 'https://raw.githubusercontent.com/naptha/tessdata/gh-pages/4.0.0_best/',
 		corePath: 'https://unpkg.com/tesseract.js-core@v2.1.0/tesseract-core.wasm.js'
 	});
 	procCnt--;
 
 	var keyText = result.data.text.trim();
-	console.log(keyText);
+	console.log(result.data);
 	if (keyText == "") return;
+	keyText = keyText.replace(')','J');
 	if (keyText.length <= 4) return;
 	if (keyText in results) return;
 	results[keyText] = true;
@@ -112,8 +114,8 @@ function onTimeUpdate(e) {
 
 	for(var i=0; i<4; i++)
 	{
-		var kx = 270, ky = 164 + 144 * i, kw = 128, kh =  20;
-		var bx = 64,  by =  59 + 144 * i, bw = 604, bh = 128;
+		var kx = 270, ky = 164 + 144 * i, kw = 136, kh =  20;
+		var bx = 68,  by =  59 + 144 * i, bw = 604, bh = 128;
 		keyCtx.drawImage(vcopy, kx,ky,kw,kh, 0,0,kw,kh);
 		brdCtx.drawImage(vcopy, bx,by,bw,bh, 0,0,bw,bh);
 		preFilter(keyCtx, kw, kh);
