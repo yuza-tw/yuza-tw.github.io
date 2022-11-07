@@ -13,7 +13,7 @@
 <a href="https://twitter.com/__yuza__" target="_blank" style="text-decoration:none; color:darkblue; float:right;">@__yuza__</a>
 </div>
 <hr size="1">
-<video id="video" width="1280" height="720" style="border: 1px solid black; float:right;" autoplay muted></video>
+<video id="video" width="1280" height="720" style="visibility:hidden; float:right;" autoplay muted></video>
 </div>
 <table id="log" border="1" style="border-collapse: collapse; margin-left:10px"><tr><th>key</th><th>board</th></tr></table>
 <canvas id="key" width="128" height="20" style="visibility:hidden;"></canvas>
@@ -34,6 +34,7 @@ async function recognize(keyUrl, brdUrl) {
 	var keyText = result.data.text.trim();
 	console.log(keyText);
 	if (keyText == "") return;
+	if (keyText[0] != "4") return;
 	if (keyText in results) return;
 	results[keyText] = true;
 
