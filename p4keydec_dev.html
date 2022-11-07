@@ -91,7 +91,6 @@ function onTimeUpdate(e) {
 	vcopy.getContext('2d').drawImage(video,0,0,video.width,video.height, 0,0,vcopy.width,vcopy.height);
 	if (procCnt>0) return;
 
-	var z = video.width / 1280;
 	var key = document.getElementById('key');
 	var brd = document.getElementById('brd');
 	var keyCtx = key.getContext('2d');
@@ -101,8 +100,8 @@ function onTimeUpdate(e) {
 	{
 		var kx = 279, ky = 164 + 144 * i, kw = 128, kh =  20;
 		var bx = 68,  by =  59 + 144 * i, bw = 604, bh = 128;
-		keyCtx.drawImage(video, z*kx,z*ky,z*kw,z*kh, 0,0,kw,kh);
-		brdCtx.drawImage(video, z*bx,z*by,z*bw,z*bh, 0,0,bw,bh);
+		keyCtx.drawImage(vcopy, kx,ky,kw,kh, 0,0,kw,kh);
+		brdCtx.drawImage(vcopy, bx,by,bw,bh, 0,0,bw,bh);
 		recognize(key.toDataURL(), brd.toDataURL());
 	}
 }
