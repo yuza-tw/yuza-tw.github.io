@@ -14,6 +14,7 @@
 <a href="https://twitter.com/__yuza__" target="_blank" style="text-decoration:none; color:darkblue; float:right;">@__yuza__</a>
 </div>
 <hr size="1">
+<canvas id="vCopy" width="640" height="360" style="border: 1px solid black; float:right;"></canvas>
 <video id="video" width="1280" height="720" style="visibility:hidden; float:right;" autoplay muted></video>
 </div>
 <table id="log" border="1" style="border-collapse: collapse; margin-left:10px"><tr><th>key</th><th>board</th></tr></table>
@@ -73,19 +74,22 @@ function copyKeys() {
 }
 
 function startCapture() {
+	document.getElementById('vCopy').style.display = "block";
 	videoElement.srcObject = window.stream;
 	videoElement.ontimeupdate = onTimeUpdate;
 }
 
 function stopCapture() {
+	document.getElementById('vCopy').style.display = "none";
 	videoElement.srcObject = null;
 	videoElement.ontimeupdate = null;
 }
 
 function onTimeUpdate(e) {
+	var video = e.target;
+	document.getElementById('vCopy').getContext('2d').drawImage(video,0,0,video.width,video.height);
 	if (procCnt>0) return;
 
-	var video = e.target;
 	var z = video.width / 1280;
 	var key = document.getElementById('key');
 	var brd = document.getElementById('brd');
