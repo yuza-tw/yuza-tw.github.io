@@ -3,7 +3,7 @@
 <script src='https://unpkg.com/tesseract.js@v2.1.0/dist/tesseract.min.js'></script>
 <title>P4 Key Decoder</title>
 </head>
-<body style="margin:0">
+<body style="margin:0; font-family:monospace">
 <div style="position:sticky; top:0; background-color:#eee">
 <div style="padding:8px 8px 0px 8px">
 <label for="videoSource">入力デバイス：</label><select id="videoSource"></select>
@@ -33,7 +33,7 @@ async function recognize(keyUrl, brdUrl) {
 	const worker = createWorker({
 		langPath: 'https://raw.githubusercontent.com/naptha/tessdata/gh-pages/4.0.0_best/',
         corePath: 'https://unpkg.com/tesseract.js-core@3.0.2/tesseract-core.wasm.js',
-        logger: m => console.log(m)
+        //logger: m => console.log(m)
       });
 	await worker.load();
 	await worker.loadLanguage('eng');
@@ -68,9 +68,18 @@ async function recognize(keyUrl, brdUrl) {
 	var c_k = document.createElement('td');
 	var c_b = document.createElement('td');
 	var brdImg = document.createElement('img');
-	var txt = document.createTextNode(keyText);
-	c_k.onclick = onClickText;
+	var kp = document.createElement('p');
+	var txtOrg = document.createTextNode(keyText);
+	var txt = document.createElement('input');
+	txt.setAttribute("type", "text");
+	txt.value = keyText;
+	txt.oldvalue = keyText;
+	txt.oninput = onTypedText;
+	kp.onclick = onClickText;
+	c_k.style.fontSize = "200%";
 	brdImg.src = brdUrl;
+	kp.appendChild(txtOrg);
+	c_k.appendChild(kp);
 	c_k.appendChild(txt);
 	c_b.appendChild(brdImg);
 	tr.appendChild(c_k);
@@ -95,10 +104,20 @@ videoElement.onloadedmetadata = function (e) {
 };
 
 function onClickText(e) {
-	var k = e.target.innerText;
+	var k = this.innerText;
 	var v = (results[k] == false);
 	results[k] = v;
-	e.target.style.color = v ? "black" : "red";
+	this.style.color = v ? "black" : "red";
+}
+
+function onTypedText(e) {
+	var v = this.value.toUpperCase();
+	results[this.oldvalue] = false;
+	results[v] = true;
+	this.parentElement.style.color = "red";
+	this.style.color = "blue";
+	this.oldvalue = v;
+	this.value = v;
 }
 
 function copyKeys() {
