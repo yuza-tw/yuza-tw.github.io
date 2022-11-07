@@ -10,6 +10,7 @@
 <button id="get-cameras">デバイス一覧取得</button> |
 <button id="start-capture">キャプチャ開始</button>
 <button id="stop-capture">停止</button>
+<button id="copy-keys">全キーのコピー</button>
 <a href="https://twitter.com/__yuza__" target="_blank" style="text-decoration:none; color:darkblue; float:right;">@__yuza__</a>
 </div>
 <hr size="1">
@@ -55,6 +56,7 @@ async function recognize(keyUrl, brdUrl) {
 document.getElementById('get-cameras').onclick = getCameras;
 document.getElementById('start-capture').onclick = startCapture;
 document.getElementById('stop-capture').onclick = stopCapture;
+document.getElementById('copy-keys').onclick = copyKeys;
 
 var videoElement = document.querySelector("#video");
 var videoSelect = document.querySelector('select#videoSource');
@@ -65,6 +67,10 @@ videoElement.onloadedmetadata = function (e) {
 	videoElement.height = this.videoHeight;
 	console.log(videoElement.width, videoElement.height);
 };
+
+function copyKeys() {
+	navigator.clipboard.writeText(Object.keys(results).join('\n'));
+}
 
 function startCapture() {
 	videoElement.srcObject = window.stream;
