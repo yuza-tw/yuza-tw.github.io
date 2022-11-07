@@ -28,16 +28,35 @@ var results = {};
 
 async function recognize(keyUrl, brdUrl) {
 	procCnt++;
+
+	const { createWorker } = Tesseract;
+	const worker = createWorker({
+		langPath: 'https://raw.githubusercontent.com/naptha/tessdata/gh-pages/4.0.0_best/',
+        corePath: 'https://unpkg.com/tesseract.js-core@3.0.2/tesseract-core.wasm.js',
+        logger: m => console.log(m)
+      });
+	await worker.load();
+	await worker.loadLanguage('eng');
+    await worker.initialize('eng');
+    await worker.setParameters({
+	    tessedit_char_whitelist: '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ',
+	    tessedit_pageseg_mode: '8'
+	});
+
+	const result = await worker.recognize(keyUrl);
+    await worker.terminate();
+/*
 	const result = await Tesseract.recognize(keyUrl, 'eng', {
 		langPath: 'https://raw.githubusercontent.com/naptha/tessdata/gh-pages/4.0.0_best/',
-		corePath: 'https://unpkg.com/tesseract.js-core@v2.1.0/tesseract-core.wasm.js',
+		corePath: 'https://unpkg.com/tesseract.js-core@3.0.2/tesseract-core.wasm.js',
 		tessedit_char_whitelist: '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ',
 		tessedit_pageseg_mode: '8',
 	});
+*/
 	procCnt--;
 
 	var keyText = result.data.text.trim();
-	console.log(result.data);
+//	console.log(result.data);
 	if (keyText == "") return;
 	keyText = keyText.replace(')','J').replace('-','').replace(' ','');
 //	if (keyText.length <= 4) return;
