@@ -70,7 +70,7 @@ async function recognize(keyUrl, brdUrl) {
 	txt.oldvalue = keyText;
 	txt.oninput = onTypedText;
 	kp.onclick = onClickText;
-	c_k.style.fontSize = "200%";
+	c_k.style.fontSize = "250%";
 	keyImg.src = keyUrl;
 	brdImg.src = brdUrl;
 	ki.appendChild(keyImg);
@@ -143,11 +143,11 @@ function preFilter(ctx, w, h) {
 	const imageData = ctx.getImageData(0, 0, w, h);
 	var data = imageData.data;
 	for (let i = 0; i < data.length; i += 4) {
-		var v = 255 - (data[i] - 128) * 3;
+		var v = 240 - (data[i] - 128) * 3;
 		if (v<0) v = 0;
-	  	data[i]   = v;
-	  	data[i+1] = v;
-	  	data[i+2] = v;
+		data[i]   = v;
+		data[i+1] = v;
+		data[i+2] = v;
 	}
 	ctx.putImageData(imageData, 0, 0);
 }
@@ -166,12 +166,11 @@ function onTimeUpdate(e) {
 
 	for(var i=0; i<4; i++)
 	{
-		var kx = 274, ky = 164 + 144 * i, kw = 136, kh =  20;
+		var kx = 278, ky = 164 + 144 * i, kw = 136, kh =  20;
 		var bx = 68,  by =  59 + 144 * i, bw = 604, bh = 128;
 		keyCtx.drawImage(vcopy, kx,ky,kw,kh, 0,0,key.width,key.height);
 		brdCtx.drawImage(vcopy, bx,by,bw,bh, 0,0,bw,bh);
 		preFilter(keyCtx, key.width, key.height);
-		brdCtx.drawImage(key, 0, 0, key.width,key.height, 460,102,kw,kh);
 		recognize(key.toDataURL(), brd.toDataURL());
 	}
 }
@@ -208,7 +207,7 @@ function getStream() {
 		video: {deviceId: videoSource ? {exact: videoSource} : undefined}
 	};
 	return navigator.mediaDevices.getUserMedia(constraints).
-    	then(gotStream).catch(handleError);
+		then(gotStream).catch(handleError);
 }
 
 function gotStream(stream) {
