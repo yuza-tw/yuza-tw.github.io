@@ -59,6 +59,7 @@ async function recognize(keyUrl, brdUrl) {
 //	console.log(result.data);
 	if (keyText == "") return;
 	if (keyText.length <= 4) return;
+	if (keyText[0] == 'A') keyText = "4" + keyText.substring(1);
 	if (keyText in results) return;
 	results[keyText] = true;
 
@@ -168,12 +169,12 @@ function onTimeUpdate(e) {
 
 	for(var i=0; i<4; i++)
 	{
-		var kx = 274, ky = 164 + 144 * i, kw = 272, kh =  40;
+		var kx = 274, ky = 164 + 144 * i, kw = 136, kh =  20;
 		var bx = 68,  by =  59 + 144 * i, bw = 604, bh = 128;
-		keyCtx.drawImage(vcopy, kx,ky,kw,kh, 0,0,kw,kh);
+		keyCtx.drawImage(vcopy, kx,ky,kw,kh, 0,0,key.width,key.height);
 		brdCtx.drawImage(vcopy, bx,by,bw,bh, 0,0,bw,bh);
 		preFilter(keyCtx, kw, kh);
-		brdCtx.drawImage(key, 0, 0, kw,kh, 460,102,kw/2,kh/2);
+		brdCtx.drawImage(key, 0, 0, key.width,key.height, 460,102,kw,kh);
 		recognize(key.toDataURL(), brd.toDataURL());
 	}
 }
