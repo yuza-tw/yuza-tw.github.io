@@ -40,7 +40,7 @@ async function recognize(keyUrl, brdUrl) {
     await worker.initialize('eng');
     await worker.setParameters({
 	    tessedit_char_whitelist: '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ',
-	    tessedit_pageseg_mode: '8'
+	    tessedit_pageseg_mode: '13', // PSM.RAW_LINE
 	});
 
 	const result = await worker.recognize(keyUrl);
