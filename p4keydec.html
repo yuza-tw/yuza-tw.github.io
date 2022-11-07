@@ -55,11 +55,10 @@ async function recognize(keyUrl, brdUrl) {
 */
 	procCnt--;
 
-	var keyText = result.data.text.trim();
+	var keyText = result.data.text.trim().replace(' ','');
 //	console.log(result.data);
 	if (keyText == "") return;
-	keyText = keyText.replace(')','J').replace('-','').replace(' ','');
-//	if (keyText.length <= 4) return;
+	if (keyText.length <= 4) return;
 	if (keyText in results) return;
 	results[keyText] = true;
 
