@@ -85,6 +85,19 @@ function stopCapture() {
 	videoElement.ontimeupdate = null;
 }
 
+function preFilter(ctx, w, h) {
+	const imageData = ctx.getImageData(0, 0, w, h);
+	var data = imageData.data;
+	for (let i = 0; i < data.length; i += 4) {
+		var v = 255 - (data[i] - 192) * 4;
+	  	data[i]   = v;
+	  	data[i+1] = v;
+	  	data[i+2] = v;
+	}
+	ctx.putImageData(imageData, 0, 0);
+}
+
+
 function onTimeUpdate(e) {
 	var video = e.target;
 	var vcopy = document.getElementById('vCopy');
@@ -93,8 +106,8 @@ function onTimeUpdate(e) {
 
 	var key = document.getElementById('key');
 	var brd = document.getElementById('brd');
-	var keyCtx = key.getContext('2d');
-	var brdCtx = brd.getContext('2d');
+	var keyCtx = key.getContext('2d', {willReadFrequently: true});
+	var brdCtx = brd.getContext('2d', {willReadFrequently: true});
 
 	for(var i=0; i<4; i++)
 	{
@@ -102,6 +115,8 @@ function onTimeUpdate(e) {
 		var bx = 68,  by =  59 + 144 * i, bw = 604, bh = 128;
 		keyCtx.drawImage(vcopy, kx,ky,kw,kh, 0,0,kw,kh);
 		brdCtx.drawImage(vcopy, bx,by,bw,bh, 0,0,bw,bh);
+		preFilter(keyCtx, kw, kh);
+		brdCtx.drawImage(key, 0, 0, kw,kh, 450,100,kw,kh);
 		recognize(key.toDataURL(), brd.toDataURL());
 	}
 }
