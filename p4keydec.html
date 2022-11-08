@@ -2,6 +2,9 @@
 <html>
 <head>
 <meta charset="utf-8">
+<style>
+.key { font-size:190%; padding-left:0.2em; letter-spacing:1px; }
+</style>
 <script src='https://unpkg.com/tesseract.js@v2.1.0/dist/tesseract.min.js'></script>
 <title>P4 Key Decoder</title>
 </head>
@@ -13,7 +16,8 @@
 動画から：<input id="from-file" type="file" accept="video/*"/> |
 <button id="start-capture">キャプチャ開始</button>
 <button id="stop-capture">停止</button>
-<button id="copy-keys">認識した全キーをクリップボードにコピー</button>
+<button id="copy-keys">認識した全キーをクリップボードにコピー</button> |
+並列化：<input id="parallel" type="number" min="4" max="64" value="4"></input>
 <a href="https://twitter.com/__yuza__" target="_blank" style="text-decoration:none; color:darkblue; float:right;">@__yuza__</a>
 </div>
 <hr size="1">
@@ -21,7 +25,7 @@
 <video id="video" width="1280" height="720" style="visibility:hidden; float:right;" autoplay muted></video>
 </div>
 <table id="log" border="1" style="border-collapse: collapse; margin-left:10px;background-color:#fff"><tr><th>key</th><th>board</th></tr></table>
-<canvas id="key" width="272" height="40" style="visibility:hidden;"></canvas>
+<canvas id="key" width="260" height="36" style="visibility:hidden;"></canvas>
 <canvas id="brd" width="604" height="128" style="visibility:hidden;"></canvas>
 
 <script>
@@ -35,7 +39,7 @@ async function recognize(keyUrl, brdUrl) {
 
 	const { createWorker } = Tesseract;
 	const worker = createWorker({
-		langPath: 'https://raw.githubusercontent.com/naptha/tessdata/gh-pages/4.0.0_best/',
+		langPath: 'https://raw.githubusercontent.com/naptha/tessdata/gh-pages/4.0.0/',
         corePath: 'https://unpkg.com/tesseract.js-core@3.0.2/tesseract-core.wasm.js',
         //logger: m => console.log(m)
       });
@@ -50,9 +54,16 @@ async function recognize(keyUrl, brdUrl) {
   await worker.terminate();
 
 	procCnt--;
-
-	var keyText = result.data.text.trim().replace(' ','');
-//	console.log(result.data);
+	console.log(result.data);
+	var keyText = "", lr = 0, lx;
+	for(var i in result.data.symbols)
+	{
+		var s = result.data.symbols[i];
+		lx = lr;
+		lr = s.bbox.x1;
+		if (s.bbox.x0 < lx - 3) continue; // overlap
+		keyText += s.text.trim();
+	}
 	if (keyText == "") return;
 	if (keyText.length <= 4) return;
 	if (keyText[0] == 'A') keyText = "4" + keyText.substring(1);
@@ -75,8 +86,7 @@ async function recognize(keyUrl, brdUrl) {
 	txt.oldvalue = keyText;
 	txt.oninput = onTypedText;
 	kp.onclick = onClickText;
-	kp.style.fontSize = "190%";
-	kp.style.paddingLeft = "0.5em";
+	kp.className = "key";
 	keyImg.src = keyUrl;
 	brdImg.src = brdUrl;
 	ki.appendChild(keyImg);
@@ -154,12 +164,16 @@ function preFilter(ctx, w, h, checkChange) {
 	var data = imageData.data;
 
 	var has0 = false;
+	var ov = 255;
 	for (let i = 0; i < data.length; i += 4) {
 		var v = Math.max(0, Math.min(255, (255 - data[i]) * 3));
 		if (v == 0) has0 = true;
-		data[i]   = v;
-		data[i+1] = v;
-		data[i+2] = v;
+		var c = (v < ov) ? v : ov;
+		if (c!=255) c=0;
+		data[i]   = c;
+		data[i+1] = c;
+		data[i+2] = c;
+		ov = v;
 	}
 	if (!has0) return false;
 
@@ -186,14 +200,16 @@ function onTimeUpdate(e) {
 }
 
 function doCapture(video) {
-	var vcopy = document.getElementById('vCopy');
-	vcopy.getContext('2d').drawImage(video,0,0,video.width,video.height, 0,0,vcopy.width,vcopy.height);
-	if (procCnt>0)
+	var para = document.getElementById('parallel');
+	if (procCnt > para.value - 2)
 	{
 		if (!video.autoplay)
-			setTimeout(doCapture, 100, video);
+			setTimeout(doCapture, 30, video);
 		return;	
 	}
+
+	var vcopy = document.getElementById('vCopy');
+	vcopy.getContext('2d').drawImage(video,0,0,video.width,video.height, 0,0,vcopy.width,vcopy.height);
 
 	var key = document.getElementById('key');
 	var brd = document.getElementById('brd');
@@ -202,7 +218,7 @@ function doCapture(video) {
 
 	for(var i=0; i<4; i++)
 	{
-		var kx = 278, ky = 164 + 144 * i, kw = 136, kh =  20;
+		var kx = 282, ky = 166 + 144 * i, kw = 130, kh =  18;
 		var bx = 68,  by =  59 + 144 * i, bw = 604, bh = 128;
 		keyCtx.drawImage(vcopy, kx,ky,kw,kh, 0,0,key.width,key.height);
 		brdCtx.drawImage(vcopy, bx,by,bw,bh, 0,0,bw,bh);
