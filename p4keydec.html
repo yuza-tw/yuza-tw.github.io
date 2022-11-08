@@ -1,9 +1,11 @@
+<!DOCTYPE HTML>
 <html>
 <head>
+<meta charset="utf-8">
 <script src='https://unpkg.com/tesseract.js@v2.1.0/dist/tesseract.min.js'></script>
 <title>P4 Key Decoder</title>
 </head>
-<body style="margin:0;">
+<body style="margin:0;background-color:#ddd">
 <div style="position:sticky; top:0; background-color:#eee">
 <div style="padding:8px 8px 0px 8px">
 <label for="videoSource">入力デバイス：</label><select id="videoSource"></select>
@@ -18,7 +20,7 @@
 <canvas id="vCopy" width="1280" height="720" style="border: 1px solid black; float:right; width:640px"></canvas>
 <video id="video" width="1280" height="720" style="visibility:hidden; float:right;" autoplay muted></video>
 </div>
-<table id="log" border="1" style="border-collapse: collapse; margin-left:10px"><tr><th>key</th><th>board</th></tr></table>
+<table id="log" border="1" style="border-collapse: collapse; margin-left:10px;background-color:#fff"><tr><th>key</th><th>board</th></tr></table>
 <canvas id="key" width="272" height="40" style="visibility:hidden;"></canvas>
 <canvas id="brd" width="604" height="128" style="visibility:hidden;"></canvas>
 
