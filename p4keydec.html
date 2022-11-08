@@ -7,7 +7,8 @@
 <div style="position:sticky; top:0; background-color:#eee">
 <div style="padding:8px 8px 0px 8px">
 <label for="videoSource">入力デバイス：</label><select id="videoSource"></select>
-<button id="get-cameras">デバイス一覧取得</button> |
+<button id="get-cameras">一覧取得</button> |
+動画から：<input id="from-file" type="file" accept="video/*"/> |
 <button id="start-capture">キャプチャ開始</button>
 <button id="stop-capture">停止</button>
 <button id="copy-keys">キーのコピー</button>
@@ -25,6 +26,7 @@
 
 var procCnt = 0;
 var results = {};
+var lastImageData = null;
 
 async function recognize(keyUrl, brdUrl) {
 	procCnt++;
@@ -91,6 +93,7 @@ document.getElementById('get-cameras').onclick = getCameras;
 document.getElementById('start-capture').onclick = startCapture;
 document.getElementById('stop-capture').onclick = stopCapture;
 document.getElementById('copy-keys').onclick = copyKeys;
+document.getElementById('from-file').onchange = extractFrames;
 
 var videoElement = document.querySelector("#video");
 var videoSelect = document.querySelector('select#videoSource');
@@ -131,8 +134,11 @@ function copyKeys() {
 
 function startCapture() {
 	document.getElementById('vCopy').style.display = "block";
-	videoElement.srcObject = window.stream;
 	videoElement.ontimeupdate = onTimeUpdate;
+	if (window.srcFile)
+		videoElement.src = window.srcFile;
+	if (window.stream)
+		videoElement.srcObject = window.stream;
 }
 
 function stopCapture() {
@@ -141,28 +147,51 @@ function stopCapture() {
 	videoElement.ontimeupdate = null;
 }
 
-function preFilter(ctx, w, h) {
+function preFilter(ctx, w, h, checkChange) {
 	const imageData = ctx.getImageData(0, 0, w, h);
 	var data = imageData.data;
+
 	var has0 = false;
 	for (let i = 0; i < data.length; i += 4) {
-		var v = 240 - (data[i] - 128) * 3;
-		if (v<0) { v = 0; has0 = true; }
+		var v = Math.max(0, Math.min(255, (255 - data[i]) * 3));
+		if (v == 0) has0 = true;
 		data[i]   = v;
 		data[i+1] = v;
 		data[i+2] = v;
 	}
+	if (!has0) return false;
+
+	if (checkChange && lastImageData)
+	{
+		var diff = 0;
+		var ldata = lastImageData.data;
+		for (let i = 0; i < data.length; i += 8) {
+			diff += Math.abs(ldata[i] - data[i]);
+		}
+		if (diff / data.length < 1) return false;
+	}
+
+	if (checkChange)
+		lastImageData = imageData;
+
 	ctx.putImageData(imageData, 0, 0);
 
-	return has0;
+	return true;
 }
 
-
 function onTimeUpdate(e) {
-	var video = e.target;
+	doCapture(this);
+}
+
+function doCapture(video) {
 	var vcopy = document.getElementById('vCopy');
 	vcopy.getContext('2d').drawImage(video,0,0,video.width,video.height, 0,0,vcopy.width,vcopy.height);
-	if (procCnt>0) return;
+	if (procCnt>0)
+	{
+		if (!video.autoplay)
+			setTimeout(doCapture, 100, video);
+		return;	
+	}
 
 	var key = document.getElementById('key');
 	var brd = document.getElementById('brd');
@@ -175,13 +204,31 @@ function onTimeUpdate(e) {
 		var bx = 68,  by =  59 + 144 * i, bw = 604, bh = 128;
 		keyCtx.drawImage(vcopy, kx,ky,kw,kh, 0,0,key.width,key.height);
 		brdCtx.drawImage(vcopy, bx,by,bw,bh, 0,0,bw,bh);
-		if (preFilter(keyCtx, key.width, key.height))
+		if (preFilter(keyCtx, key.width, key.height, i==0))
 		{
 			recognize(key.toDataURL(), brd.toDataURL());
+		}
+		else
+		{
+			// first row has not changed
+			if (i==0) break;
+		}
+	}
+
+	if (!video.autoplay)
+	{
+		if (video.currentTime < video.duration) {
+		  video.currentTime += 1.0 / 60.0;
+		}		
+		else
+		{
+			stopCapture();
 		}
 	}
 }
 
+
+// ----- capture device -----
 function getCameras() {
 	getStream().then(getDevices).then(gotDevices);
 }
@@ -213,18 +260,29 @@ function getStream() {
 	const constraints = {
 		video: {deviceId: videoSource ? {exact: videoSource} : undefined}
 	};
+	videoElement.autoplay = true;
 	return navigator.mediaDevices.getUserMedia(constraints).
 		then(gotStream).catch(handleError);
 }
 
 function gotStream(stream) {
 	window.stream = stream; // make stream available to console
+	window.srcFile = null
 	videoSelect.selectedIndex = [...videoSelect.options].
 		findIndex(option => option.text === stream.getVideoTracks()[0].label);
 }
 
 function handleError(error) {
   console.error('Error: ', error);
+}
+
+// ----- offline file -----
+function extractFrames()
+{
+	videoElement.autoplay = false;
+  videoElement.currentTime = 1.0 / 60.0;
+	window.stream = null;
+  window.srcFile = URL.createObjectURL(this.files[0]);
 }
 
 </script>
