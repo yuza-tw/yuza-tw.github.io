@@ -1,0 +1,914 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Deadly Dungeon</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pixi.js/7.3.2/pixi.min.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="title-screen">
+        <h1>Deadly Dungeon</h1>
+        <button id="start-button">ゲームスタート</button>
+    </div>
+    <div id="game-container">
+        <div id="floor-info"></div>
+        <div id="dungeon"></div>
+        <div id="log-window"></div>
+        <div id="mobile-controls">
+            <div class="mobile-button" id="btn-left">←</div>
+            <div class="mobile-button" id="btn-right">→</div>
+            <div class="mobile-button" id="btn-up">↑</div>
+            <div class="mobile-button" id="btn-down">↓</div>
+        </div>
+    </div>
+<script>
+
+const GAME_CONFIG = {
+    MAX_DUNGEON_WIDTH: 50,
+    MAX_DUNGEON_HEIGHT: 50,
+    BASE_DUNGEON_WIDTH: 30,
+    BASE_DUNGEON_HEIGHT: 20,
+    TILE_SIZE: 16,
+    SPRITE_SIZE: 16
+};
+
+const TILES = {
+    EMPTY: ' ',
+    WALL: '#',
+    ROOM: '.',
+    CORRIDOR: ',',
+    STAIR_DOWN: '>',
+    TREASURE: '$',
+    KEY: 'K',
+    YOU: '@',
+    DEAD: 'X',
+    AMULET: 'A'
+};
+
+const ENEMY_TILES = {
+    SLOW: 'S',
+    NORMAL: 'E',
+    FAST: 'F',
+    VERYFAST: 'V'
+};
+
+const ITEM_CONFIG = {
+    STAIRS: {
+        tile: TILES.STAIR_DOWN,
+        texture: 'stairs',
+        color: 0xFFFFFF
+    },
+    TREASURE: {
+        tile: TILES.TREASURE,
+        texture: 'treasure',
+        color: 0xFFFFFF
+    },
+    KEY: {
+        tile: TILES.KEY,
+        texture: 'key',
+        color: 0xFFFFFF
+    },
+    AMULET: {
+        tile: TILES.AMULET,
+        texture: 'amulet',
+        color: 0xFFFFFF
+    }
+};
+
+const SPRITE_POSITIONS = {
+    wall: { x: 10, y: 17 },
+    floor: { x: 1, y: 0 },
+    player: { x: 29, y: 0 },
+    dead: { x: 38, y: 11 },
+    enemy_s: { x: 26, y: 8 },
+    enemy_n: { x: 29, y: 6 },
+    enemy_f: { x: 26, y: 6 },
+    enemy_v: { x: 24, y: 7 },
+    stairs: { x: 22, y: 11 },
+    treasure: { x: 41, y: 4 },
+    amulet: { x: 45, y: 8 },
+    key: { x: 33, y: 11 }
+};
+
+let gameState = {
+    currentFloor: 1,
+    moneyAtStart: 0,
+    gameLoopInterval: null,
+    gameStartTime: null,
+    moveInterval: null,
+    cameraInterval: null,
+    isGameOver: false
+};
+
+let dungeonWidth = GAME_CONFIG.BASE_DUNGEON_WIDTH;
+let dungeonHeight = GAME_CONFIG.BASE_DUNGEON_HEIGHT;
+
+let app;
+let baseTexture;
+let textures = {};
+
+const ENEMY_CONFIG = {
+    S: {
+        tile: ENEMY_TILES.SLOW,
+        moveDelay: 1200,
+        color: '#f0f',
+        name: 'コウモリ',
+        texture: 'enemy_s',
+        money: 10,
+        speed: 1
+    },
+    N: {
+        tile: ENEMY_TILES.NORMAL,
+        moveDelay: 800,
+        color: '#f0f',
+        name: 'スケルトン',
+        texture: 'enemy_n',
+        money: 20,
+        speed: 1.5
+    },
+    F: {
+        tile: ENEMY_TILES.FAST,
+        moveDelay: 400,
+        color: '#f0f',
+        name: 'ゴースト',
+        texture: 'enemy_f',
+        money: 30,
+        speed: 2
+    },
+    V: {
+        tile: ENEMY_TILES.VERYFAST,
+        moveDelay: 250,
+        color: '#f0f',
+        name: 'アンノウン',
+        texture: 'enemy_v',
+        money: 50,
+        speed: 3
+    }
+};
+
+const PLAYER_CONFIG = {
+    moveDelay: 100,
+    color: 0x44FF88
+};
+
+let player = {
+    x: -1,
+    y: -1,
+    canMove: true,
+    moveDelay: PLAYER_CONFIG.moveDelay,
+    sprite: null,
+    hasKey: false,
+    numAmulet: 0,
+    money: 0
+};
+
+let enemies = [];
+let items = [];
+
+function createEmptyDungeon(width, height) {
+    return Array.from({ length: height }, () => Array.from({ length: width }, () => TILES.WALL));
+}
+
+function placeRoom(dungeon, room) {
+    for (let y = room.y; y < room.y + room.height; y++) {
+        for (let x = room.x; x < room.x + room.width; x++) {
+            dungeon[y][x] = TILES.ROOM;
+        }
+    }
+}
+
+function replaceTile(dungeon, oldTile, newTile) {
+    for (let y = 0; y < dungeonHeight; y++) {
+        for (let x = 0; x < dungeonWidth; x++) {
+            if (dungeon[y][x] == oldTile) dungeon[y][x] = newTile;
+        }
+    }
+}
+
+function placeCorridor(dungeon, x1, y1, x2, y2) {
+    for (let x = Math.min(x1, x2); x <= Math.max(x1, x2); x++) {
+        dungeon[y1][x] = TILES.CORRIDOR;
+    }
+    for (let y = Math.min(y1, y2); y <= Math.max(y1, y2); y++) {
+        dungeon[y][x2] = TILES.CORRIDOR;
+    }
+}
+
+function generateRandomRoom(maxWidth, maxHeight) {
+    const width = Math.floor(Math.random() * (maxWidth - 4)) + 4;
+    const height = Math.floor(Math.random() * (maxHeight - 4)) + 4;
+    const x = Math.floor(Math.random() * (dungeonWidth - width - 1)) + 1;
+    const y = Math.floor(Math.random() * (dungeonHeight - height - 1)) + 1;
+    return { x, y, width, height };
+}
+
+function tileToPixel(x, y) {
+    return {
+        x: x * GAME_CONFIG.TILE_SIZE,
+        y: y * GAME_CONFIG.TILE_SIZE
+    };
+}
+
+function createSprite(texture, x, y, color = 0xffffff) {
+    const sprite = new PIXI.Sprite(textures[texture]);
+    sprite.width = GAME_CONFIG.TILE_SIZE;
+    sprite.height = GAME_CONFIG.TILE_SIZE;
+    sprite.tint = color;
+    updateSpritePosition(sprite, x, y);
+    return sprite;
+}
+
+function updateSpritePosition(sprite, x, y) {
+    const pixelPos = tileToPixel(x, y);
+    sprite.x = pixelPos.x;
+    sprite.y = pixelPos.y;
+}
+
+function generateDungeon() {
+    let width = Math.ceil(GAME_CONFIG.BASE_DUNGEON_WIDTH + gameState.currentFloor * (Math.random() * 0.7 + 0.5));
+    let height = Math.ceil(GAME_CONFIG.BASE_DUNGEON_HEIGHT + gameState.currentFloor * (Math.random() * 0.7 + 0.5));
+    width = Math.min(GAME_CONFIG.MAX_DUNGEON_WIDTH, width);
+    height = Math.min(GAME_CONFIG.MAX_DUNGEON_HEIGHT, height);
+    dungeonWidth = width;
+    dungeonHeight = height;
+
+    maxRooms = Math.floor(10 + gameState.currentFloor * 0.5);
+
+    app.dynamicContainer.removeChildren();
+    const dungeon = createEmptyDungeon(width, height);
+    const rooms = generateRooms(dungeon, maxRooms);
+    placeItems(dungeon);
+    placePlayer(dungeon);
+    placeEnemies(dungeon, rooms);
+    replaceTile(dungeon, TILES.CORRIDOR, TILES.ROOM);
+
+    return dungeon;
+}
+
+function generateRooms(dungeon, maxRooms) {
+    const rooms = [];
+    for (let i = 0; i < maxRooms; i++) {
+        const room = generateRandomRoom(10, 8);
+        if (!hasRoomOverlap(room, rooms)) {
+            placeRoom(dungeon, room);
+            if (rooms.length > 0) {
+                connectRooms(dungeon, rooms[rooms.length - 1], room);
+            }
+            rooms.push(room);
+        }
+    }
+    return rooms;
+}
+
+function hasRoomOverlap(room, existingRooms) {
+    return existingRooms.some(otherRoom => 
+        room.x < otherRoom.x + otherRoom.width &&
+        room.x + room.width > otherRoom.x &&
+        room.y < otherRoom.y + otherRoom.height &&
+        room.y + room.height > otherRoom.y
+    );
+}
+
+function connectRooms(dungeon, room1, room2) {
+    const x1 = room1.x + Math.floor(room1.width / 2);
+    const y1 = room1.y + Math.floor(room1.height / 2);
+    const x2 = room2.x + Math.floor(room2.width / 2);
+    const y2 = room2.y + Math.floor(room2.height / 2);
+    placeCorridor(dungeon, x1, y1, x2, y2);
+}
+
+function placeItems(dungeon) {
+    items = [];
+    generateItem(dungeon, ITEM_CONFIG.STAIRS);
+    generateItem(dungeon, ITEM_CONFIG.TREASURE);
+    generateItem(dungeon, ITEM_CONFIG.TREASURE);
+    generateItem(dungeon, ITEM_CONFIG.KEY);
+    if (gameState.currentFloor % 5 === 0) generateItem(dungeon, ITEM_CONFIG.AMULET);
+}
+
+function placePlayer(dungeon) {
+    const playerPos = generateTileAtRandomLocation(dungeon, TILES.YOU);
+    player.x = playerPos.x;
+    player.y = playerPos.y;
+    player.sprite = createSprite('player', player.x, player.y, PLAYER_CONFIG.color);
+    app.dynamicContainer.addChild(player.sprite);
+}
+
+function placeEnemies(dungeon, rooms) {
+    enemies = [];
+    const enemyTypes = Object.keys(ENEMY_CONFIG);
+    const startTime = Date.now() + 800;
+    for (let iRoom = 0; iRoom < rooms.length; iRoom++) {
+        const room = rooms[iRoom];
+        const enemyCount = Math.floor(0.8 + Math.random() * Math.random() * Math.random() * gameState.currentFloor);
+        for (let i = 0; i < enemyCount; i++) {
+            const room = rooms[Math.floor(Math.random() * rooms.length)];
+            const enemyX = room.x + Math.floor(Math.random() * room.width);
+            const enemyY = room.y + Math.floor(Math.random() * room.height);
+            
+            if (dungeon[enemyY][enemyX] !== TILES.ROOM) continue;
+
+            const dx = player.x - enemyX;
+            const dy = player.y - enemyY;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            
+            if (distance < 10) continue;
+
+            const ENEMY_TYPE_TABLE = [
+                "SSSSSSSSNNNNNNNF",
+                "SSSNNNNNNNNNNFFF",
+                "SNF",
+                "NNNNNNFFFFFV",
+                "NNNFFFV",
+                "NFFVV",
+                "FV",
+                "V"
+            ];
+
+            let row = ENEMY_TYPE_TABLE[Math.floor(gameState.currentFloor / 3)];
+            let column = Math.floor(Math.random() * row.length);
+            let enemyType = row[column];
+
+            const enemy = {
+                x: enemyX,
+                y: enemyY,
+                type: enemyType,
+                enemyType: ENEMY_CONFIG[enemyType],
+                lastMoved: startTime,
+                sprite: createSprite(ENEMY_CONFIG[enemyType].texture, enemyX, enemyY, ENEMY_CONFIG[enemyType].color)
+            };
+            enemies.push(enemy);
+            app.dynamicContainer.addChild(enemy.sprite);
+        }
+    }
+}
+
+function generateTileAtRandomLocation(dungeon, tile) {
+    while(true) {
+        const x = Math.floor(Math.random() * dungeonWidth);
+        const y = Math.floor(Math.random() * dungeonHeight);
+        if (dungeon[y][x] == TILES.ROOM) {
+            dungeon[y][x] = tile;
+            return { x, y };
+        }
+    }
+}
+
+function generateItem(dungeon, itemConfig) {
+    const pos = generateTileAtRandomLocation(dungeon, itemConfig.tile);
+    if (!pos) return;
+
+    const item = {
+        x: pos.x,
+        y: pos.y,
+        type: itemConfig.tile,
+        sprite: createSprite(itemConfig.texture, pos.x, pos.y, itemConfig.color)
+    };
+    items.push(item);
+    app.dynamicContainer.addChild(item.sprite);
+}
+
+function removeItem(x, y) {
+    const index = items.findIndex(item => item.x === x && item.y === y);
+    if (index === -1) return;
+
+    app.dynamicContainer.removeChild(items[index].sprite);
+    items.splice(index, 1);
+    dungeon[y][x] = TILES.ROOM;
+}
+
+function removeEnemy(enemy) {
+    app.dynamicContainer.removeChild(enemy.sprite);
+    enemies.splice(enemies.indexOf(enemy), 1);
+    dungeon[enemy.y][enemy.x] = TILES.ROOM;
+}
+
+function addLog(message) {
+    const logWindow = document.getElementById('log-window');
+    const timestamp = new Date().toLocaleTimeString();
+    logWindow.innerHTML += `[${timestamp}] ${message}<br>`;
+    logWindow.scrollTop = logWindow.scrollHeight;
+}
+
+function updateStatus() {
+    const floorInfo = document.getElementById('floor-info');
+    floorInfo.textContent = `${gameState.currentFloor}F | 所持金 : ${player.money}G`;
+}
+
+function createCircleEffect(x, y) {
+    const pixelPos = tileToPixel(x, y);
+    const circle = new PIXI.Graphics();
+    circle.lineStyle(2, 0xFFFFFF, 0.5);
+    circle.drawCircle(0, 0, 1);
+    circle.x = pixelPos.x + GAME_CONFIG.TILE_SIZE / 2;
+    circle.y = pixelPos.y + GAME_CONFIG.TILE_SIZE / 2;
+
+    app.dynamicContainer.addChild(circle);
+
+    const startTime = Date.now();
+    const duration = 500;
+    const maxRadius = GAME_CONFIG.TILE_SIZE * 2;
+
+    const animate = () => {
+        const elapsed = Date.now() - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+        
+        const radius = progress * maxRadius;
+        const alpha = 1 - progress;
+
+        circle.clear();
+        circle.lineStyle(2, 0xFFFFFF, alpha);
+        circle.drawCircle(0, 0, radius);
+
+        if (progress < 1) {
+            requestAnimationFrame(animate);
+        } else {
+            app.dynamicContainer.removeChild(circle);
+        }
+    };
+
+    animate();
+}
+
+function updateCameraPosition(interpolate = true) {
+    const container = app.dynamicContainer;
+    const tileSize = GAME_CONFIG.TILE_SIZE * container.scale.x;
+    
+    const playerX = (player.x + 0.5) * tileSize;
+    const playerY = (player.y + 0.5) * tileSize;
+    const screenCenterX = window.innerWidth / 2;
+    const screenCenterY = window.innerHeight / 2 - 70;
+    
+    if (interpolate) {
+        container.x += (screenCenterX - playerX - container.x) * 0.06;
+        container.y += (screenCenterY - playerY - container.y) * 0.06;
+    } else {
+        container.x = screenCenterX - playerX;
+        container.y = screenCenterY - playerY;
+    }
+    
+    app.staticContainer.x = container.x;
+    app.staticContainer.y = container.y;
+}
+
+function movePlayer(dx, dy) {
+    if (!player.canMove || gameState.isGameOver) return;
+
+    const newX = player.x + dx;
+    const newY = player.y + dy;
+
+    if (newX < 0 || newX >= dungeonWidth || 
+        newY < 0 || newY >= dungeonHeight || 
+        dungeon[newY][newX] === TILES.WALL) return;
+
+    const nextTile = dungeon[newY][newX];
+
+    if (Object.values(ENEMY_CONFIG).some(type => type.tile === nextTile)) {
+        createCircleEffect(newX, newY);
+        for (let i = enemies.length - 1; i >= 0; i--) {
+            if (enemies[i].x === newX && enemies[i].y === newY) {
+                const enemyType = enemies[i].enemyType;
+                player.money += enemyType.money;
+                updateStatus();
+                addLog(`${enemyType.name}を倒した！ ${enemyType.money}G 手に入れた！`);
+                removeEnemy(enemies[i]);
+                break;
+            }
+        }
+    }
+
+    if (nextTile === TILES.KEY) {
+        createCircleEffect(newX, newY);
+        player.hasKey = true;
+        addLog("鍵を手に入れた！");
+        removeItem(newX, newY);
+    }
+
+    if (nextTile === TILES.AMULET) {
+        createCircleEffect(newX, newY);
+        player.numAmulet++;
+        addLog("アミュレットを手に入れた！");
+        removeItem(newX, newY);
+    }
+
+    if (nextTile === TILES.STAIR_DOWN) {
+        if (player.hasKey) {
+            addLog("鍵を使って次の階に進んだ。");
+            goToNextFloor();
+            return;
+        } else {
+            addLog("鍵が必要なようだ...");
+            return;
+        }
+    }
+
+    if (nextTile === TILES.TREASURE) {
+        createCircleEffect(newX, newY);
+        const treasureMoney = Math.floor(5 * gameState.currentFloor);
+        player.money += treasureMoney;
+        updateStatus();
+        addLog(`${treasureMoney}G 手に入れた！`);
+        removeItem(newX, newY);
+    }
+
+    dungeon[player.y][player.x] = TILES.ROOM;
+    player.x = newX;
+    player.y = newY;
+    dungeon[player.y][player.x] = TILES.YOU;
+    updateSpritePosition(player.sprite, player.x, player.y);
+    createParticleEffect(player.x, player.y, 1);
+
+    player.canMove = false;
+    setTimeout(() => player.canMove = true, player.moveDelay);
+}
+
+function goToNextFloor() {
+    gameState.currentFloor++;
+    gameState.moneyAtStart = player.money;
+    player.hasKey = false;
+    
+    if (gameState.currentFloor > 20) {
+        handleGameClear();
+        return;
+    }
+    
+    updateStatus();
+    dungeon = generateDungeon();
+    printDungeon(dungeon);
+    addLog(`${gameState.currentFloor}階に到着した。`);
+    
+    startGameLoop();
+}
+
+function createParticleEffect(x, y, particleCount = 3) {
+    const pixelPos = tileToPixel(x, y);
+    
+    for (let i = 0; i < particleCount; i++) {
+        const particle = new PIXI.Graphics();
+        particle.beginFill(0xCCCCCC, 0.8);
+        particle.drawRect(0, 0, 2, 2);
+        particle.endFill();
+        
+        particle.x = pixelPos.x + Math.random() * GAME_CONFIG.TILE_SIZE;
+        particle.y = pixelPos.y + GAME_CONFIG.TILE_SIZE;
+        particle.oy = particle.y;
+        
+        app.dynamicContainer.addChild(particle);
+        
+        const angle = Math.random() * Math.PI;
+        const speed = 0.6 + Math.random();
+        particle.vx = Math.cos(angle) * speed * 0.5;
+        particle.vy = -Math.sin(angle) * speed;
+        
+        const startTime = Date.now();
+        const duration = 500 + Math.random() * 500;
+        
+        const animate = () => {
+            const elapsed = Date.now() - startTime;
+            const progress = Math.min(elapsed / duration, 1);
+            
+            particle.vy += 0.1;
+            particle.x += particle.vx;
+            particle.y += particle.vy;
+            if (particle.y > particle.oy) {
+                particle.vx = particle.vx * 0.7;
+                particle.vy = particle.vy * -0.7;
+                particle.y += particle.vy;
+            }
+            particle.alpha = 1 - progress;
+            
+            if (progress < 1) {
+                requestAnimationFrame(animate);
+            } else {
+                app.dynamicContainer.removeChild(particle);
+            }
+        };
+        
+        animate();
+    }
+}
+
+function moveEnemies() {
+    const currentTime = Date.now();
+    
+    for (let i = enemies.length - 1; i >= 0; i--) {
+        const enemy = enemies[i];
+        const enemyType = ENEMY_CONFIG[enemy.type];
+        
+        if (currentTime - enemy.lastMoved < enemyType.moveDelay) continue;
+
+        const dx = player.x - enemy.x;
+        const dy = player.y - enemy.y;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        
+        if (distance >= 10) continue;
+
+        const moveX = dx === 0 ? 0 : dx > 0 ? 1 : -1;
+        const moveY = dy === 0 ? 0 : dy > 0 ? 1 : -1;
+        const newX = enemy.x + moveX;
+        const newY = enemy.y + moveY;
+        
+        if (newX < 0 || newX >= dungeonWidth || 
+            newY < 0 || newY >= dungeonHeight || 
+            dungeon[newY][newX] !== TILES.ROOM && dungeon[newY][newX] !== TILES.YOU) continue;
+        
+        dungeon[enemy.y][enemy.x] = TILES.ROOM;
+        enemy.x = newX;
+        enemy.y = newY;
+        enemy.lastMoved = currentTime;
+        
+        if (enemy.x === player.x && enemy.y === player.y) {
+            if (player.numAmulet > 0) {
+                player.numAmulet--;
+                addLog(`加護の力で${enemyType.name}を消滅させた！`);
+                addLog(`アミュレットは壊れてしまった。(残り ${player.numAmulet})`);
+                removeEnemy(enemy);
+                continue;
+            } else {
+                handlePlayerDeath(enemyType.name + "に倒された！");
+                return;
+            }
+        }
+        
+        dungeon[enemy.y][enemy.x] = enemyType.tile;
+        updateSpritePosition(enemy.sprite, enemy.x, enemy.y);
+        
+        if (enemy.type !== 'S') {
+            createParticleEffect(enemy.x, enemy.y);
+        }
+    }
+}
+
+function handlePlayerDeath(cause) {
+    gameState.isGameOver = true;
+    app.ticker.remove(gameLoop);
+    app.ticker.remove(updateCameraPosition);
+    newMoney = Math.ceil(gameState.moneyAtStart * 0.9);
+    dropMoney = player.money - newMoney;
+    player.money = newMoney;
+    updateStatus();
+    dungeon[player.y][player.x] = TILES.DEAD;
+    player.sprite.texture = textures.dead;
+    
+    addLog(`${cause}`);
+    addLog(`所持金が ${dropMoney}G 減ってしまった...`);
+    setTimeout(() => {
+        if (confirm("同じフロアからやり直しますか？")) {
+            restartFloor();
+        } else {
+            returnToTitle();
+        }
+    }, 100);
+}
+
+function resetGameState() {
+    gameState.currentFloor = 1;
+    gameState.moneyAtStart = 0;
+    gameState.isGameOver = false;
+    player.hasKey = false;
+    player.numAmulet = 0;
+    player.money = 0;
+}
+
+function returnToTitle() {
+    resetGameState();
+    initTitleScreen();
+}
+
+function handleGameClear() {
+    app.ticker.remove(gameLoop);
+    app.ticker.remove(updateCameraPosition);
+    const gameEndTime = new Date();
+    const playTime = Math.floor((gameEndTime - gameState.gameStartTime) / 1000);
+    
+    addLog(`おめでとう！全ての階を踏破した！`);
+    addLog(`最終結果：${player.money}G 獲得！`);
+    addLog(`クリアタイム：${playTime}秒`);
+    
+    setTimeout(() => {
+        alert(`ゲームクリア！\n最終獲得金額：${player.money}G\nクリアタイム：${playTime}秒`);
+        returnToTitle();
+    }, 100);
+}
+
+function resetGame() {
+    gameState.currentFloor = 1;
+    gameState.moneyAtStart = 0;
+    gameState.gameStartTime = Date.now();
+    gameState.isGameOver = false;
+    player.hasKey = false;
+    player.money = 0;
+    player.numAmulet = 0;
+    dungeon = generateDungeon();
+    printDungeon(dungeon);
+    addLog("新しいゲームを開始した。");
+    startGameLoop();
+}
+
+function restartFloor() {
+    player.hasKey = false;
+    dungeon = generateDungeon();
+    printDungeon(dungeon);
+    addLog(`${gameState.currentFloor}階を再挑戦...`);
+    startGameLoop();
+}
+
+function startGameLoop() {
+    if (gameState.gameLoopInterval) {
+        clearInterval(gameState.gameLoopInterval);
+    }
+    if (gameState.cameraInterval) {
+        clearInterval(gameState.cameraInterval);
+    }
+    if (gameState.moveInterval) {
+       clearInterval(gameState.moveInterval);
+    }
+    
+    app.ticker.add(gameLoop);
+    app.ticker.add(updateCameraPosition);
+    gameState.moveInterval = null;
+    gameState.isGameOver = false;
+}
+
+function gameLoop(delta) {
+    if (gameState.isGameOver) return;
+    updateEnemies();
+    updateStatus();
+}
+
+function updateEnemies() {
+    moveEnemies();
+}
+
+async function initPixi() {
+    const container = document.getElementById('dungeon');
+    
+    app = new PIXI.Application({
+        width: window.innerWidth,
+        height: window.innerHeight,
+        backgroundColor: 0x282018,
+        resolution: window.devicePixelRatio || 1,
+        autoDensity: true,
+        resizeTo: container
+    });
+    
+    container.appendChild(app.view);
+
+    app.staticContainer = new PIXI.Container();
+    app.stage.addChild(app.staticContainer);
+
+    app.dynamicContainer = new PIXI.Container();
+    app.stage.addChild(app.dynamicContainer);
+
+    app.staticContainer.scale.set(2.5);
+    app.dynamicContainer.scale.set(2.5);
+
+    baseTexture = await PIXI.Assets.load('colored-transparent_packed.png');
+        
+    for (const [key, pos] of Object.entries(SPRITE_POSITIONS)) {
+        textures[key] = new PIXI.Texture(
+            baseTexture,
+            new PIXI.Rectangle(pos.x * GAME_CONFIG.SPRITE_SIZE, pos.y * GAME_CONFIG.SPRITE_SIZE, GAME_CONFIG.SPRITE_SIZE, GAME_CONFIG.SPRITE_SIZE)
+        );
+    }
+
+    function resizeHandler() {
+        const newWidth = window.innerWidth;
+        const newHeight = window.innerHeight;
+        app.renderer.resize(newWidth, newHeight);
+        updateCameraPosition(false);
+    }
+
+    window.addEventListener('resize', resizeHandler);
+    resizeHandler();
+}
+
+function printDungeon(dungeon) {
+    app.staticContainer.removeChildren();
+    for (let y = 0; y < dungeon.length; y++) {
+        for (let x = 0; x < dungeon[y].length; x++) {
+            if (dungeon[y][x] === TILES.WALL) {
+                let brightness = 0x605040;
+                if (
+                    (y > 0 && dungeon[y-1][x] !== TILES.WALL) ||
+                    (y < dungeon.length-1 && dungeon[y+1][x] !== TILES.WALL) ||
+                    (x > 0 && dungeon[y][x-1] !== TILES.WALL) ||
+                    (x < dungeon[y].length-1 && dungeon[y][x+1] !== TILES.WALL)
+                ) {
+                    brightness = 0xaaaaaa;
+                }
+                
+                const sprite = createSprite('wall', x, y, brightness);
+                app.staticContainer.addChild(sprite);
+            }
+            if (dungeon[y][x] === TILES.ROOM && Math.random() < 0.1) {
+                const sprite = createSprite('floor', x, y);
+                app.staticContainer.addChild(sprite);
+            }
+        }
+    }
+    updateStatus();
+    updateCameraPosition(false);
+}
+
+function initControls() {
+    const buttons = {
+        'btn-up': { dx: 0, dy: -1 },
+        'btn-down': { dx: 0, dy: 1 },
+        'btn-left': { dx: -1, dy: 0 },
+        'btn-right': { dx: 1, dy: 0 }
+    };
+
+    const startMove = (id) => {
+        const direction = buttons[id];
+        if (!gameState.moveInterval && direction) {
+            gameState.moveInterval = setInterval(() => {
+                movePlayer(direction.dx, direction.dy);
+            }, 17);
+        }
+    };
+
+    const stopMove = () => {
+        if (gameState.moveInterval) {
+            clearInterval(gameState.moveInterval);
+            gameState.moveInterval = null;
+        }
+    };
+
+    for (const [id, direction] of Object.entries(buttons)) {
+        const button = document.getElementById(id);
+        let handleMoveStart = (e) => {
+            e.preventDefault();
+            startMove(id);
+        };
+        let handleMoveEnd = (e) => {
+            e.preventDefault();
+            stopMove();
+        };
+        button.addEventListener('mousedown', handleMoveStart);
+        button.addEventListener('touchstart', handleMoveStart);
+        button.addEventListener('mouseup', handleMoveEnd);
+        button.addEventListener('touchend', handleMoveEnd);
+        button.addEventListener('mouseleave', handleMoveEnd);
+        button.addEventListener('touchcancel', handleMoveEnd);
+    }
+
+    document.addEventListener('keydown', (event) => {
+        switch(event.key) {
+            case 'ArrowUp':
+                movePlayer(0, -1);
+                break;
+            case 'ArrowDown':
+                movePlayer(0, 1);
+                break;
+            case 'ArrowLeft':
+                movePlayer(-1, 0);
+                break;
+            case 'ArrowRight':
+                movePlayer(1, 0);
+                break;
+        }
+    });
+}
+
+
+async function initTitleScreen() {
+    const titleScreen = document.getElementById('title-screen');
+    const gameContainer = document.getElementById('game-container');
+    const startButton = document.getElementById('start-button');
+    
+    titleScreen.style.display = 'flex';
+    gameContainer.style.display = 'none';
+    
+    const handleKeyPress = (event) => {
+        if (event.key === ' ' || event.key === 'Enter') {
+            event.preventDefault();
+            startGame();
+        }
+    };
+    
+    document.addEventListener('keydown', handleKeyPress);
+    
+    const startGame = () => {
+        document.removeEventListener('keydown', handleKeyPress);
+        titleScreen.style.display = 'none';
+        gameContainer.style.display = 'block';
+        resetGame();
+    };
+    
+    startButton.addEventListener('click', startGame);
+}
+
+async function startGame() {
+    await initPixi();
+    initControls();
+    await initTitleScreen();
+}
+
+startGame();
+
+</script>
+</body>
+</html>

@@ -1,0 +1,206 @@
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700&display=swap');
+
+body {
+    margin: 0;
+    padding: 0;
+    background-color: #2a1b3d;
+    color: #ffffff;
+    font-family: 'Noto Sans JP', sans-serif;
+    overflow: hidden;
+}
+
+#title-screen {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    background: linear-gradient(135deg, #2a1b3d 0%, #1a0b2d 100%);
+    z-index: 1000;
+}
+
+#title-screen h1 {
+    font-size: min(70vw, 4em);
+    margin-bottom: 1em;
+    text-shadow: 0 0 20px rgba(255, 255, 255, 0.5),
+                 0 0 40px rgba(255, 255, 255, 0.3);
+    letter-spacing: 2px;
+    font-weight: 700;
+    animation: glow 2s ease-in-out infinite alternate;
+    text-align: center;
+    width: 100%;
+    padding: 0 1rem;
+    box-sizing: border-box;
+    white-space: nowrap;
+}
+
+@keyframes glow {
+    from {
+        text-shadow: 0 0 20px rgba(255, 255, 255, 0.5),
+                    0 0 40px rgba(255, 255, 255, 0.3);
+    }
+    to {
+        text-shadow: 0 0 30px rgba(255, 255, 255, 0.7),
+                    0 0 50px rgba(255, 255, 255, 0.5);
+    }
+}
+
+#start-button {
+    padding: 1em 3em;
+    font-size: 1.4em;
+    background: linear-gradient(45deg, #4a2b6d 0%, #6a3b8d 100%);
+    color: white;
+    border: 2px solid #8a5bad;
+    border-radius: 50px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-family: 'Noto Sans JP', sans-serif;
+    font-weight: 700;
+    letter-spacing: 1px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+}
+
+#start-button:hover {
+    transform: scale(1.1) translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+    background: linear-gradient(45deg, #5a3b7d 0%, #7a4b9d 100%);
+}
+
+#start-button:active {
+    transform: scale(1.05) translateY(0);
+}
+
+#game-container {
+    display: none;
+    width: 100vw;
+    height: 100vh;
+    position: relative;
+    overflow: hidden;
+    background-color: #2a1b3d;
+}
+
+#dungeon {
+    width: 100vw;
+    height: 100vh;
+    position: absolute;
+    overflow: hidden;
+}
+
+#dungeon canvas {
+    position: absolute;
+    image-rendering: pixelated;
+}
+
+#floor-info {
+    position: fixed;
+    top: 20px;
+    left: 20px;
+    background: rgba(0, 0, 0, 0.8);
+    padding: 10px 10px;
+    border-radius: 10px;
+    z-index: 100;
+    font-size: 1.1em;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+    backdrop-filter: blur(5px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+#log-window {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 60%;
+    max-width: 600px;
+    height: 100px;
+    background: rgba(0, 0, 0, 0.4);
+    padding: 15px;
+    border-radius: 10px;
+    overflow-y: auto;
+    font-size: 1em;
+    line-height: 1.5;
+    z-index: 100;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+    backdrop-filter: blur(5px);
+    border: 1px solid rgba(255, 255, 255, 0.4);
+}
+
+#log-window::-webkit-scrollbar {
+    width: 8px;
+}
+
+#log-window::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 4px;
+}
+
+#log-window::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 4px;
+}
+
+#mobile-controls {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    z-index: 100;
+    width: 180px;
+    height: 180px;
+}
+
+.mobile-button {
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.6);
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    border-radius: 10px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: white;
+    font-size: 1.8em;
+    cursor: pointer;
+    user-select: none;
+    transition: all 0.2s ease;
+    backdrop-filter: blur(5px);
+}
+
+.mobile-button:active {
+    background: rgba(255, 255, 255, 0.2);
+    transform: scale(0.95);
+}
+
+#btn-up { grid-column: 2; grid-row: 1; }
+#btn-left { grid-column: 1; grid-row: 2; }
+#btn-right { grid-column: 3; grid-row: 2; }
+#btn-down { grid-column: 2; grid-row: 3; }
+
+@media (max-width: 768px) {
+    #floor-info {
+        font-size: 14px;
+    }
+    #log-window {
+        width: 80%;
+        font-size: 12px;
+        height: 50px;
+    }
+    #mobile-controls {
+        width: 150px;
+        height: 150px;
+        bottom: 80px;
+    }
+    .mobile-button {
+        font-size: 20px;
+    }
+    #title-screen h1 {
+        font-size: 3em;
+        padding: 0 0.5rem;
+    }
+} 

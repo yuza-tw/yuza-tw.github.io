@@ -15,8 +15,9 @@ window.addEventListener('load', () => {
 
     var ox = -1, oy = -1, op = 0, vx = 0, vy = 0, tx = 0, ty = 0, vp = 0;
     var drew = false, inStroke = false, inGrab = false, mode = 0;
+    var isEraseKeyPressed = false;
 
-    function pv(v, g, c, o) {
+    function cdi(v, g, c, o) {
         var d = 1.0 + o;
         return (v + (g - c) * (o * o)) / (d * d);
     }
@@ -36,22 +37,24 @@ window.addEventListener('load', () => {
         e.preventDefault();
         if (inGrab) return doGrab(e);
 
-        var p = e.pressure;
-        if (p == 0.0) {
-            if (!inStroke) return;
-        } else {
-            tx = e.offsetX;
-            ty = e.offsetY;
-        }
-
         if (e.type == 'pointerdown') {
             context.putTag();
             drew = false;
             inStroke = true;
-            ox = tx;
-            oy = ty;
+            ox = tx = e.offsetX;
+            oy = ty = e.offsetY;
             op = vx = vy = 0;
-            mode = (e.buttons == 2);
+            mode = (e.buttons == 2) || isEraseKeyPressed;
+        }
+
+        var p = e.pressure;
+        if (p == 0.0) {
+            ox = e.offsetX;
+            oy = e.offsetY;
+            if (!inStroke) return;
+        } else {
+            tx = e.offsetX;
+            ty = e.offsetY;
         }
 
         if (ox==tx && oy==ty)
@@ -59,7 +62,6 @@ window.addEventListener('load', () => {
 
         drew = true;
 
-        var omega = (vx*(tx-ox)+vy*(ty-oy) < 0) ? 0.2 : 0.1;
         var w = mode ? 48 : 12;
         var c = mode ? `white` : `black`;
 
@@ -68,21 +70,21 @@ window.addEventListener('load', () => {
             context.lineWidth = op * w;
             context.strokeStyle = c;
             context.moveTo(ox, oy);
-            ox += vx = pv(vx, tx, ox, omega);
-            oy += vy = pv(vy, ty, oy, omega);
-            op += vp = pv(vp, p, op, omega);
+            ox += vx = cdi(vx, tx, ox, 0.1);
+            oy += vy = cdi(vy, ty, oy, 0.1);
+            op += vp = cdi(vp, p, op, 0.2);
             context.lineTo(ox, oy);
             context.stroke();
         }
 
-        inStroke = (op >= 0.01);
+        inStroke = (op >= 0.1);
     }
 
     mainCanvas.addEventListener('pointerdown', processPointerEvent)
     mainCanvas.addEventListener('pointermove', processPointerEvent)
     mainCanvas.addEventListener('pointerup', processPointerEvent)
 
-    document.onkeydown = (e) => { 
+    document.addEventListener('keydown', (e) => {
         if (e.ctrlKey && e.key == 'z') context.undoTag();
         if (e.ctrlKey && e.key == 'y') context.redoTag();
         if (e.key == ' ') {
@@ -92,15 +94,23 @@ window.addEventListener('load', () => {
             }
             e.preventDefault();
         }
-    }
+        if (e.key == 'e') {
+            isEraseKeyPressed = true;
+            e.preventDefault();
+        }
+    });
 
-    document.onkeyup = (e) => { 
+    document.addEventListener('keyup', (e) => {
         if (e.key == ' ') {
             mainCanvas.style.cursor = 'crosshair';
             inGrab = false;
             e.preventDefault();
         }
-    }
+        if (e.key == 'e') {
+            isEraseKeyPressed = false;
+            e.preventDefault();
+        }
+    });
 })
 </script>
 </head>
