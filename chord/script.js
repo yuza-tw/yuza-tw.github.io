@@ -204,7 +204,6 @@ function updateFromSourceCode() {
         parsedProgression.forEach(row => { chordProgression.push([...row]); });
         
         updateChordGrid();
-        updateSourceCode();
     } catch (e) {
         console.error(e);
         showMessage('構文エラー: ' + e.message, 'error');
