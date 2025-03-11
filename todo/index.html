@@ -10,16 +10,24 @@
         <div class="tabs" id="categoryTabs">
             <button class="tab active">買う</button>
             <button class="tab">やる</button>
-            <button class="tab">単発</button>
+            <button class="tab">たまに</button>
         </div>
 
         <div id="itemList"></div>
     </div>
-    <div class="modal" id="addModal">
+    <div class="modal" id="addModal" onclick="handleModalOutsideClick(event)">
         <div class="modal-content">
             <input type="text" id="itemInput" class="input-field" placeholder="入力">
             <button onclick="addItem()" class="input-field" style="background:var(--primary-color);color:white">追加</button>
             <button onclick="closeModal()" class="input-field">キャンセル</button>
+        </div>
+    </div>
+    <div class="modal" id="editModal" onclick="handleModalOutsideClick(event)">
+        <div class="modal-content">
+            <input type="text" id="editInput" class="input-field" placeholder="項目名を入力">
+            <button onclick="updateItem()" class="input-field" style="background:var(--primary-color);color:white">適用</button>
+            <button onclick="deleteItem()" class="input-field" style="background:#d95555;color:white">削除</button>
+            <button onclick="closeEditModal()" class="input-field">キャンセル</button>
         </div>
     </div>
     <button class="add-button" id="addButton">+</button>

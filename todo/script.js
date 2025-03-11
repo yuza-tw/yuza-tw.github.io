@@ -1,5 +1,6 @@
 let items = JSON.parse(localStorage.getItem('MyToDo.shoppingItems')) || [];
 let currentCategory = '買う';
+let selectedItemId;
 
 function formatRelativeTime(dateString) {
     const date = new Date(dateString);
@@ -27,13 +28,13 @@ function renderItems() {
     });
 
     itemList.innerHTML = sortedItems.map(item => `
-        <div class="item">
+        <div class="item" onclick="handleItemClick(event, '${item.id}')">
             <span class="item-name">${item.name}</span>
             <div class="item-right">
                 ${!item.checked ? `<span class="last-date">${formatRelativeTime(item.lastDone)}</span>` : ''}
                 <input type="checkbox" class="checkbox" 
                     ${item.checked ? 'checked' : ''} 
-                    onchange="toggleItem('${item.id}')">
+                    onclick="event.stopPropagation()">
             </div>
         </div>
     `).join('');
@@ -114,6 +115,57 @@ function initializeApp() {
     });
 
     renderItems();
+}
+
+function handleItemClick(event, id) {
+    if (event.target.classList.contains('checkbox')) {
+        toggleItem(id);
+    } else {
+        selectedItemId = id;
+        const item = items.find(item => item.id === id);
+        const editInput = document.getElementById('editInput');
+        editInput.value = item.name;
+        document.getElementById('editModal').style.display = 'block';
+        document.getElementById('addButton').style.display = 'none';
+        editInput.focus();
+        editInput.select();
+    }
+}
+
+function updateItem() {
+    const editInput = document.getElementById('editInput');
+    const item = items.find(item => item.id === selectedItemId);
+    if (editInput.value.trim() && item) {
+        item.name = editInput.value.trim();
+        saveItems();
+        renderItems();
+        closeEditModal();
+    }
+}
+
+function deleteItem() {
+    items = items.filter(item => item.id !== selectedItemId);
+    saveItems();
+    renderItems();
+    closeEditModal();
+}
+
+function handleModalOutsideClick(event) {
+    if (event.target.id === 'editModal') {
+        closeEditModal();
+    } else if (event.target.id === 'addModal') {
+        closeAddModal();
+    }
+}
+
+function closeEditModal() {
+    document.getElementById('editModal').style.display = 'none';
+    document.getElementById('addButton').style.display = 'block';
+}
+
+function closeAddModal() {
+    document.getElementById('addModal').style.display = 'none';
+    document.getElementById('addButton').style.display = 'block';
 }
 
 document.addEventListener('DOMContentLoaded', initializeApp); 
