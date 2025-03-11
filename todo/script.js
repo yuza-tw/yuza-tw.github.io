@@ -35,6 +35,7 @@ function renderItems() {
                 ${!item.checked ? `<span class="last-date">${formatRelativeTime(item.lastDone)}</span>` : ''}
                 <input type="checkbox" class="checkbox" 
                     ${item.checked ? 'checked' : ''} 
+                    onchange="toggleItem('${item.id}')"
                     onclick="event.stopPropagation()">
             </div>
         </div>
