@@ -11,7 +11,7 @@
 }
 
 body {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Hiragino Sans", "Hiragino Kaku Gothic ProN", "BIZ UDPGothic", sans-serif;
+    font-family: sans-serif;
     line-height: 1.6;
     background: linear-gradient(135deg, #ffcad4, #b8a9c9, #a2d2ff);
     background-attachment: fixed;
@@ -19,8 +19,12 @@ body {
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding: 20px;
     min-height: 100vh;
+    min-height: -webkit-fill-available;
+}
+
+html {
+    height: -webkit-fill-available;
 }
 
 .container {
@@ -28,12 +32,21 @@ body {
     max-width: 800px;
     margin: 0 auto;
     position: relative;
-    height: calc(100vh - 40px);
+    height: 100vh;
     background: rgba(255, 255, 255, 0.6);
     backdrop-filter: blur(10px);
     border-radius: 12px;
     overflow-y: auto;
     box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+
+@supports (height: 100svh) {
+    .body {
+        min-height: 100svh;
+    }
+    .container {
+        height: 100svh;
+    }
 }
 
 .tabs {
