@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>My ToDo</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <div class="tabs" id="categoryTabs">
+            <button class="tab active">買う</button>
+            <button class="tab">やる</button>
+            <button class="tab">単発</button>
+        </div>
+
+        <div id="itemList"></div>
+    </div>
+    <div class="modal" id="addModal">
+        <div class="modal-content">
+            <input type="text" id="itemInput" class="input-field" placeholder="入力">
+            <button onclick="addItem()" class="input-field" style="background:var(--primary-color);color:white">追加</button>
+            <button onclick="closeModal()" class="input-field">キャンセル</button>
+        </div>
+    </div>
+    <button class="add-button" id="addButton">+</button>
+    <script src="script.js"></script>
+</body>
+</html>
+
