@@ -18,25 +18,24 @@
     <div class="modal" id="addModal" onclick="handleModalOutsideClick(event)">
         <div class="modal-content">
             <input type="text" id="itemInput" class="input-field" placeholder="入力">
-            <button onclick="addItem()" class="input-field" style="background:var(--primary-color);color:white">追加</button>
-            <button onclick="closeModal()" class="input-field">キャンセル</button>
+            <button onclick="addItem()" class="input-field">追加</button>
+            <button onclick="closeModal('addModal')" class="input-field">キャンセル</button>
         </div>
     </div>
     <div class="modal" id="editModal" onclick="handleModalOutsideClick(event)">
         <div class="modal-content">
             <input type="text" id="editInput" class="input-field" placeholder="項目名を入力">
-            <button onclick="updateItem()" class="input-field" style="background:var(--primary-color);color:white">適用</button>
+            <button onclick="updateItem()" class="input-field">適用</button>
             <button id="deleteButton" 
                 onmousedown="startDelete()" 
                 onmouseup="cancelDelete()" 
                 onmouseleave="cancelDelete()" 
                 ontouchstart="startDelete()" 
                 ontouchend="cancelDelete()"
-                class="input-field delete-button" 
-                style="background:#fcc;">
+                class="input-field delete-button">
                 <span>削除</span>
             </button>
-            <button onclick="closeEditModal()" class="input-field">キャンセル</button>
+            <button onclick="closeModal('editModal')" class="input-field">キャンセル</button>
         </div>
     </div>
     <button class="add-button" id="addButton">+</button>

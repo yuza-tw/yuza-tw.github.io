@@ -3,6 +3,8 @@ let currentCategory = '買う';
 let selectedItemId;
 let deleteTimer;
 
+const $el = document.getElementById.bind(document);
+
 function formatRelativeTime(dateString) {
     const date = new Date(dateString);
     const now = new Date();
@@ -19,8 +21,16 @@ function formatRelativeTime(dateString) {
     return `${months}ヶ月前`;
 }
 
+function adjustContainerHeight() {
+    const container = document.querySelector('.container');
+    const itemList = $el('itemList');
+    const listHeight = itemList.getBoundingClientRect().height;
+    const minHeight = Math.max(window.innerHeight, listHeight + 150);
+    container.style.height = `${minHeight}px`;
+}
+
 function renderItems() {
-    const itemList = document.getElementById('itemList');
+    const itemList = $el('itemList');
     const filteredItems = items.filter(item => item.category === currentCategory);
     const sortedItems = filteredItems.sort((a, b) => {
         const order = a.checked ? -1 : 1;
@@ -29,17 +39,20 @@ function renderItems() {
     });
 
     itemList.innerHTML = sortedItems.map(item => `
-        <div class="item" onclick="handleItemClick(event, '${item.id}')">
-            <span class="item-name">${item.name}</span>
+        <div class="item">
+            <span class="item-name" onclick="handleItemClick('${item.id}')">
+                ${item.name}
+            </span>
             <div class="item-right">
                 ${!item.checked ? `<span class="last-date">${formatRelativeTime(item.lastDone)}</span>` : ''}
                 <input type="checkbox" class="checkbox" 
                     ${item.checked ? 'checked' : ''} 
-                    onchange="toggleItem('${item.id}')"
-                    onclick="event.stopPropagation()">
+                    onchange="toggleItem('${item.id}')">
             </div>
         </div>
     `).join('');
+
+    setTimeout(adjustContainerHeight, 0);
 }
 
 function toggleItem(id) {
@@ -51,7 +64,7 @@ function toggleItem(id) {
 }
 
 function addItem() {
-    const input = document.getElementById('itemInput');
+    const input = $el('itemInput');
     if (input.value.trim()) {
         items.push({
             id: Date.now().toString(),
@@ -63,7 +76,7 @@ function addItem() {
         saveItems();
         renderItems();
         input.value = '';
-        closeModal();
+        closeModal('addModal');
     }
 }
 
@@ -71,13 +84,67 @@ function saveItems() {
     localStorage.setItem('MyToDo.shoppingItems', JSON.stringify(items));
 }
 
-function closeModal() {
-    document.getElementById('addModal').style.display = 'none';
-    document.getElementById('addButton').style.display = 'block';
+function handleItemClick(id) {
+    selectedItemId = id;
+    const item = items.find(item => item.id === id);
+    const editInput = $el('editInput');
+    editInput.value = item.name;
+    showModal('editModal');
+    editInput.focus();
+    editInput.select();
+}
+
+function updateItem() {
+    const editInput = $el('editInput');
+    const item = items.find(item => item.id === selectedItemId);
+    if (editInput.value.trim() && item) {
+        item.name = editInput.value.trim();
+        saveItems();
+        renderItems();
+        closeModal('editModal');
+    }
+}
+
+function startDelete() {
+    const deleteButton = $el('deleteButton');
+    deleteButton.classList.add('deleting');
+    deleteTimer = setTimeout(() => {
+        deleteItem();
+        deleteButton.classList.remove('deleting');
+    }, 1000);
+}
+
+function cancelDelete() {
+    const deleteButton = $el('deleteButton');
+    deleteButton.classList.remove('deleting');
+    clearTimeout(deleteTimer);
+}
+
+function deleteItem() {
+    items = items.filter(item => item.id !== selectedItemId);
+    saveItems();
+    renderItems();
+    closeModal('editModal');
+}
+
+function showModal(id) {
+    $el(id).style.display = 'block';
+    $el('addButton').style.display = 'none';
+}
+
+function closeModal(id) {
+    $el(id).style.display = 'none';
+    $el('addButton').style.display = 'block';
+}
+
+function handleModalOutsideClick(event) {
+    if (event.target.id === 'editModal' || event.target.id === 'addModal') {
+        closeModal(event.target.id);
+    }
 }
 
 function initializeApp() {
-    document.getElementById('categoryTabs').addEventListener('click', (e) => {
+    $el('categoryTabs').addEventListener('click', (e) => {
         if (e.target.classList.contains('tab')) {
             document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
             e.target.classList.add('active');
@@ -86,11 +153,10 @@ function initializeApp() {
         }
     });
 
-    document.getElementById('addButton').onclick = () => {
-        const input = document.getElementById('itemInput');
+    $el('addButton').onclick = () => {
+        const input = $el('itemInput');
         input.placeholder = `"${currentCategory}"に追加`;
-        document.getElementById('addModal').style.display = 'block';
-        document.getElementById('addButton').style.display = 'none';
+        showModal('addModal');
         input.focus();
     };
 
@@ -116,73 +182,9 @@ function initializeApp() {
         }
     });
 
+    window.addEventListener('resize', adjustContainerHeight);
+
     renderItems();
-}
-
-function handleItemClick(event, id) {
-    if (event.target.classList.contains('checkbox')) {
-        toggleItem(id);
-    } else {
-        selectedItemId = id;
-        const item = items.find(item => item.id === id);
-        const editInput = document.getElementById('editInput');
-        editInput.value = item.name;
-        document.getElementById('editModal').style.display = 'block';
-        document.getElementById('addButton').style.display = 'none';
-        editInput.focus();
-        editInput.select();
-    }
-}
-
-function updateItem() {
-    const editInput = document.getElementById('editInput');
-    const item = items.find(item => item.id === selectedItemId);
-    if (editInput.value.trim() && item) {
-        item.name = editInput.value.trim();
-        saveItems();
-        renderItems();
-        closeEditModal();
-    }
-}
-
-function startDelete() {
-    const deleteButton = document.getElementById('deleteButton');
-    deleteButton.classList.add('deleting');
-    deleteTimer = setTimeout(() => {
-        deleteItem();
-        deleteButton.classList.remove('deleting');
-    }, 1000);
-}
-
-function cancelDelete() {
-    const deleteButton = document.getElementById('deleteButton');
-    deleteButton.classList.remove('deleting');
-    clearTimeout(deleteTimer);
-}
-
-function deleteItem() {
-    items = items.filter(item => item.id !== selectedItemId);
-    saveItems();
-    renderItems();
-    closeEditModal();
-}
-
-function handleModalOutsideClick(event) {
-    if (event.target.id === 'editModal') {
-        closeEditModal();
-    } else if (event.target.id === 'addModal') {
-        closeAddModal();
-    }
-}
-
-function closeEditModal() {
-    document.getElementById('editModal').style.display = 'none';
-    document.getElementById('addButton').style.display = 'block';
-}
-
-function closeAddModal() {
-    document.getElementById('addModal').style.display = 'none';
-    document.getElementById('addButton').style.display = 'block';
 }
 
 document.addEventListener('DOMContentLoaded', initializeApp); 
