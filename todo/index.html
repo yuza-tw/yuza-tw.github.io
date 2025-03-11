@@ -26,7 +26,16 @@
         <div class="modal-content">
             <input type="text" id="editInput" class="input-field" placeholder="項目名を入力">
             <button onclick="updateItem()" class="input-field" style="background:var(--primary-color);color:white">適用</button>
-            <button onclick="deleteItem()" class="input-field" style="background:#d95555;color:white">削除</button>
+            <button id="deleteButton" 
+                onmousedown="startDelete()" 
+                onmouseup="cancelDelete()" 
+                onmouseleave="cancelDelete()" 
+                ontouchstart="startDelete()" 
+                ontouchend="cancelDelete()"
+                class="input-field delete-button" 
+                style="background:#fcc;">
+                <span>削除</span>
+            </button>
             <button onclick="closeEditModal()" class="input-field">キャンセル</button>
         </div>
     </div>

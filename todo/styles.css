@@ -186,7 +186,6 @@ html {
 .input-field:focus {
     outline: none;
     border-color: var(--primary-color);
-    box-shadow: 0 0 0 2px rgba(156, 102, 179, 0.2);
 }
 
 .modal-text {
@@ -194,4 +193,32 @@ html {
     margin-bottom: 20px;
     font-size: 1.1em;
     color: var(--text-color);
+}
+
+.delete-button {
+    position: relative;
+    overflow: hidden;
+    color: #833
+}
+
+.delete-button::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 0%;
+    height: 100%;
+    background: #f66;
+    transition: none;
+    z-index: 0;
+}
+
+.delete-button.deleting::before {
+    width: 100%;
+    transition: width 1s linear;
+}
+
+.delete-button span {
+    position: relative;
+    z-index: 1;
 } 

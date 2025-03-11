@@ -1,6 +1,7 @@
 let items = JSON.parse(localStorage.getItem('MyToDo.shoppingItems')) || [];
 let currentCategory = '買う';
 let selectedItemId;
+let deleteTimer;
 
 function formatRelativeTime(dateString) {
     const date = new Date(dateString);
@@ -141,6 +142,21 @@ function updateItem() {
         renderItems();
         closeEditModal();
     }
+}
+
+function startDelete() {
+    const deleteButton = document.getElementById('deleteButton');
+    deleteButton.classList.add('deleting');
+    deleteTimer = setTimeout(() => {
+        deleteItem();
+        deleteButton.classList.remove('deleting');
+    }, 1000);
+}
+
+function cancelDelete() {
+    const deleteButton = document.getElementById('deleteButton');
+    deleteButton.classList.remove('deleting');
+    clearTimeout(deleteTimer);
 }
 
 function deleteItem() {
