@@ -1,13 +1,13 @@
 // サンプル進行
 const chordProgression = [
-    ['F|maj7', 'E|m7', 'D|m7', 'G|13'],
-    ['C|maj7', 'A|m7', 'D|m7/G', 'G|7b9'],
-    ['E|m7b5', 'A|7', 'D|m9', 'G|m7/C'],
-    ['F|maj7', 'B|m7b5', 'E|7#9', 'A|m9'],
-    ['F|maj7#11', 'E|m9', 'D|m11', 'G|13b9'],
-    ['C|maj9', 'D|m11', 'F|9sus4', 'G|7#5'],
-    ['F|m7', 'Bb|13', 'Eb|maj7', 'Ab|maj7'],
-    ['D|m7b5', 'G|7b9', 'C|maj9', 'C|maj']
+    'F|maj7', 'E|m7', 'D|m7', 'G|13',
+    'C|maj7', 'A|m7', 'D|m7/G', 'G|7b9',
+    'E|m7b5', 'A|7', 'D|m9', 'G|m7/C',
+    'F|maj7', 'B|m7b5', 'E|7#9', 'A|m9',
+    'F|maj7#11', 'E|m9', 'D|m11', 'G|13b9',
+    'C|maj9', 'D|m11', 'F|9sus4', 'G|7#5',
+    'F|m7', 'Bb|13', 'Eb|maj7', 'Ab|maj7',
+    'D|m7b5', 'G|7b9', 'C|maj9', 'C|maj'
 ];
 
 // コードデータベース
@@ -119,8 +119,7 @@ let currentSynth = 'piano';
 let isPlaying = false;
 let currentChordIndex = 0;
 let dragSrcElement = null;
-let dragSrcRow = null;
-let dragSrcCol = null;
+let dragSrcIndex = null;
 let codeHistory = [];
 
 window.onload = () => {
@@ -129,11 +128,9 @@ window.onload = () => {
     
     // グリッドの初期表示
     const grid = document.getElementById('chordGrid');
-    chordProgression.forEach((row, rowIndex) => {
-        row.forEach((chord, colIndex) => {
-            const chordContainer = createChordContainer(chord, rowIndex, colIndex);
-            grid.appendChild(chordContainer);
-        });
+    chordProgression.forEach((chord, index) => {
+        const chordContainer = createChordContainer(chord, index);
+        grid.appendChild(chordContainer);
     });
     
     Object.values(synthTypes).forEach(synth => {
@@ -152,7 +149,10 @@ window.onload = () => {
 
 function updateSourceCode() {
     const sourceCode = document.getElementById('source-code');
-    const newCode = chordProgression.map(row => '["' + row.join('", "') + '"],').join('\n').replace(/,$/, '');
+    const newCode = '[\n' + chordProgression.map((chord, i) => {
+        return `"${chord}"${(i + 1) % 4 === 0 ? ',\n' : ', '}`;
+    }).join('').replace(/,\s*$/, '\n]');
+    
     if (newCode != sourceCode.textContent) {
         codeHistory.push(sourceCode.textContent);
     }
@@ -175,33 +175,21 @@ function updateFromSourceCode() {
     const sourceCode = document.getElementById('source-code');
     try {
         // テキストから配列に変換する処理
-        const text = sourceCode.value.trim().replace(/,$/, '');
-        const formattedText = text
-            .replace(/\[\s*"/g, '["')
-            .replace(/"\s*,\s*"/g, '","')
-            .replace(/"\s*\]/g, '"]')
-            .replace(/\],\s*\[/g, '],[');
-            
-        // evalを使用せず、安全にJSONとして解析できる形式に変換
-        const jsonText = '[' + formattedText.replace(/\]\s*,\s*\[/g, '],[') + ']';
-        const parsedProgression = JSON.parse(jsonText);
+        const text = sourceCode.value.trim().replace(/\s/g, '').replace(/'/g, '"');
+        const parsedProgression = JSON.parse(text);
         
         // 有効性チェック
         if (!Array.isArray(parsedProgression)) throw new Error('Invalid format');
         
-        parsedProgression.forEach(row => {
-            if (!Array.isArray(row)) throw new Error('Invalid row format');
-            row.forEach(chord => {
-                if (typeof chord !== 'string') throw new Error('Invalid chord format');
-                // コードの形式をチェック
-                const { root, quality } = parseChord(chord);
-                if (!root || !noteToMidi[root]) throw new Error(`Invalid root note: ${root}`);
-                if (!chordIntervals[quality]) throw new Error(`Invalid chord quality: ${quality}`);
-            });
+        parsedProgression.forEach(chord => {
+            if (typeof chord !== 'string') throw new Error('Invalid chord format');
+            const { root, quality } = parseChord(chord);
+            if (!root || !noteToMidi[root]) throw new Error(`Invalid root note: ${root}`);
+            if (!chordIntervals[quality]) throw new Error(`Invalid chord quality: ${quality}`);
         });
         
         chordProgression.length = 0;
-        parsedProgression.forEach(row => { chordProgression.push([...row]); });
+        parsedProgression.forEach(chord => { chordProgression.push(chord); });
         
         updateChordGrid();
     } catch (e) {
@@ -285,9 +273,7 @@ function startProgression() {
     currentChordIndex = 0;
 
     Tone.Transport.scheduleRepeat((time) => {
-        const row = currentChordIndex >> 2;
-        const col = currentChordIndex % 4;
-        playChord(chordProgression[row][col]);
+        playChord(chordProgression[currentChordIndex]);
         highlightChord(currentChordIndex);
         currentChordIndex = (currentChordIndex + 1) % (chordProgression.length * 4);
     }, '1n');
@@ -470,19 +456,17 @@ function exportToMidi() {
     const track = file.addTrack();
     
     let time = 0;
-    chordProgression.forEach(row => {
-        row.forEach(chord => {
-            const notes = chordToNotes(chord);
-            notes.forEach(note => {
-                const midiNote = Tone.Frequency(note).toMidi();
-                track.addNote({
-                    midi: midiNote,
-                    time: time,
-                    duration: 2
-                });
+    chordProgression.forEach(chord => {
+        const notes = chordToNotes(chord);
+        notes.forEach(note => {
+            const midiNote = Tone.Frequency(note).toMidi();
+            track.addNote({
+                midi: midiNote,
+                time: time,
+                duration: 2
             });
-            time += 2;
         });
+        time += 2;
     });
 
     const blob = new Blob([file.toArray()], { type: 'audio/midi' });
@@ -501,11 +485,18 @@ function getChordType(quality) {
     return 'other';
 }
 
-function createChordSelector(rowIndex, colIndex) {
+function isStrongProgression(currentRoot, prevRoot) {
+    const notes = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B'];
+    const currentIndex = notes.indexOf(currentRoot);
+    const prevIndex = notes.indexOf(prevRoot);
+    return ((prevIndex + 5) % 12 === currentIndex);
+}
+
+function createChordSelector(index) {
     const container = document.createElement('div');
     container.className = 'chord-selector';
 
-    const currentChord = chordProgression[rowIndex][colIndex];
+    const currentChord = chordProgression[index];
     const { root, quality, bassNote } = parseChord(currentChord);
 
     const handleWheel = (select, e) => {
@@ -525,6 +516,14 @@ function createChordSelector(rowIndex, colIndex) {
         option.textContent = note;
         if (note === root) {
             option.selected = true;
+        }
+
+        if (index > 0) {
+            const prevChord = chordProgression[index - 1];
+            const prevRoot = parseChord(prevChord).root;
+            if (isStrongProgression(note, prevRoot)) {
+                option.style.color = '#ffeb3b';
+            }
         }
         rootSelect.appendChild(option);
     });
@@ -565,7 +564,7 @@ function createChordSelector(rowIndex, colIndex) {
     randomButton.textContent = '⚅';
     randomButton.onclick = (e) => {
         e.stopPropagation();
-        randomizeChord(rowIndex, colIndex);
+        randomizeChord(index);
     };
 
     const updateChord = () => {
@@ -573,8 +572,8 @@ function createChordSelector(rowIndex, colIndex) {
         if (bassSelect.value) {
             newChord += `/${bassSelect.value}`;
         }
-        chordProgression[rowIndex][colIndex] = newChord;
-        updateChordDisplay(rowIndex, colIndex, newChord);
+        chordProgression[index] = newChord;
+        updateChordDisplay(index, newChord);
     };
 
     rootSelect.onchange = updateChord;
@@ -612,8 +611,7 @@ function findClosestChordQuality(intervals) {
     return bestMatch.quality;
 }
 
-function updateChordDisplay(rowIndex, colIndex, newChord) {
-    const index = rowIndex * 4 + colIndex;
+function updateChordDisplay(index, newChord) {
     const chordContainers = document.getElementsByClassName('chord-container');
     const chordContainer = chordContainers[index];
     const chordElement = chordContainer.querySelector('.chord');
@@ -622,7 +620,7 @@ function updateChordDisplay(rowIndex, colIndex, newChord) {
     if (oldPianoKeys) { oldPianoKeys.remove(); }
     
     const notes = getChordNotes(newChord);
-    createPianoKeys(chordContainer, notes, chordProgression[rowIndex][colIndex].split('|')[0]);
+    createPianoKeys(chordContainer, notes, chordProgression[index].split('|')[0]);
     
     const { root, quality } = parseChord(newChord);
     chordElement.dataset.type = getChordType(quality);
@@ -634,8 +632,8 @@ function updateChordDisplay(rowIndex, colIndex, newChord) {
     playChord(newChord);
 }
 
-function randomizeChord(rowIndex, colIndex) {
-    const chord = chordProgression[rowIndex][colIndex];
+function randomizeChord(index) {
+    const chord = chordProgression[index];
     const { root } = parseChord(chord);
     
     const randomChordType = chordTypeDefinitions[Math.floor(Math.random() * chordTypeDefinitions.length)];
@@ -648,8 +646,8 @@ function randomizeChord(rowIndex, colIndex) {
         newChord += `/${randomBass}`;
     }
     
-    chordProgression[rowIndex][colIndex] = newChord;
-    updateChordDisplay(rowIndex, colIndex, newChord);
+    chordProgression[index] = newChord;
+    updateChordDisplay(index, newChord);
     updateSourceCode();
 }
 
@@ -705,9 +703,8 @@ function createPianoKeys(container, notes, rootNote) {
 }
 
 function toggleNote(container, note) {
-    const rowIndex = parseInt(container.dataset.row);
-    const colIndex = parseInt(container.dataset.col);
-    const currentChord = chordProgression[rowIndex][colIndex];
+    const index = parseInt(container.dataset.index);
+    const currentChord = chordProgression[index];
     const { root, quality } = parseChord(currentChord);
     
     const pianoKeys = container.querySelector('.piano-keys');
@@ -737,14 +734,13 @@ function toggleNote(container, note) {
     if (newQuality == '?') newQuality = quality;
     const newChord = `${root}|${newQuality}`;
     
-    chordProgression[rowIndex][colIndex] = newChord;
-    updateChordDisplay(rowIndex, colIndex, newChord);
+    chordProgression[index] = newChord;
+    updateChordDisplay(index, newChord);
 }
 
 function handleDragStart(e) {
     dragSrcElement = this;
-    dragSrcRow = parseInt(this.dataset.row);
-    dragSrcCol = parseInt(this.dataset.col);
+    dragSrcIndex = parseInt(this.dataset.index);
     
     e.dataTransfer.effectAllowed = 'move';
     e.dataTransfer.setData('text/html', this.outerHTML);
@@ -775,13 +771,12 @@ function handleDrop(e) {
     }
     
     if (dragSrcElement !== this) {
-        const dragTargetRow = parseInt(this.dataset.row);
-        const dragTargetCol = parseInt(this.dataset.col);
+        const dragTargetIndex = parseInt(this.dataset.index);
         
         // コード進行データの入れ替え
-        const temp = chordProgression[dragTargetRow][dragTargetCol];
-        chordProgression[dragTargetRow][dragTargetCol] = chordProgression[dragSrcRow][dragSrcCol];
-        chordProgression[dragSrcRow][dragSrcCol] = temp;
+        const temp = chordProgression[dragTargetIndex];
+        chordProgression[dragTargetIndex] = chordProgression[dragSrcIndex];
+        chordProgression[dragSrcIndex] = temp;
         
         updateChordGrid();
         updateSourceCode();
@@ -797,16 +792,13 @@ function handleDragEnd(e) {
     });
 }
 
-function createChordContainer(chord, rowIndex, colIndex) {
+function createChordContainer(chord, index) {
     const chordContainer = document.createElement('div');
     chordContainer.className = 'chord-container';
     chordContainer.draggable = true;
     
-    // ドラッグ＆ドロップに必要なデータ属性を追加
-    chordContainer.dataset.row = rowIndex;
-    chordContainer.dataset.col = colIndex;
+    chordContainer.dataset.index = index;
     
-    // ドラッグ＆ドロップイベントハンドラの登録
     chordContainer.addEventListener('dragstart', handleDragStart, false);
     chordContainer.addEventListener('dragenter', handleDragEnter, false);
     chordContainer.addEventListener('dragleave', handleDragLeave, false);
@@ -827,20 +819,18 @@ function createChordContainer(chord, rowIndex, colIndex) {
     button.onclick = () => { playChord(chord); };
     
     chordContainer.appendChild(button);
-    chordContainer.appendChild(createChordSelector(rowIndex, colIndex));
+    chordContainer.appendChild(createChordSelector(index));
     
     return chordContainer;
 }
 
 function updateChordGrid() {
     const grid = document.getElementById('chordGrid');
-    grid.innerHTML = '';  // グリッドをクリア
+    grid.innerHTML = '';
     
-    chordProgression.forEach((row, rowIndex) => {
-        row.forEach((chord, colIndex) => {
-            const chordContainer = createChordContainer(chord, rowIndex, colIndex);
-            grid.appendChild(chordContainer);
-        });
+    chordProgression.forEach((chord, index) => {
+        const chordContainer = createChordContainer(chord, index);
+        grid.appendChild(chordContainer);
     });
 }
 
