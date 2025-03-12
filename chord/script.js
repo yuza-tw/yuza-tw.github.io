@@ -1,5 +1,7 @@
 // サンプル進行
 const chordProgression = [
+    "C|maj9", "Gb|m9", "F|maj7", "Bb|add9",
+    "Eb|m7", "Ab|maj7", "Db|maj9", "Gb|maj9",
     'F|maj7', 'E|m7', 'D|m7', 'G|13',
     'C|maj7', 'A|m7', 'D|m7/G', 'G|7b9',
     'E|m7b5', 'A|7', 'D|m9', 'G|m7/C',
@@ -26,6 +28,7 @@ const chordTypeDefinitions = [
     { name: 'm', type: 'minor', intervals: [0, 3, 7] },
     { name: 'm6', type: 'minor', intervals: [0, 3, 7, 9] },
     { name: 'm7', type: 'minor', intervals: [0, 3, 7, 10] },
+    { name: 'm7add11', type: 'minor', intervals: [0, 3, 7, 10, 17] },
     { name: 'm9', type: 'minor', intervals: [0, 3, 7, 10, 14] },
     { name: 'm11', type: 'minor', intervals: [0, 3, 7, 10, 14, 17] },
     { name: 'm13', type: 'minor', intervals: [0, 3, 7, 10, 14, 21] },
@@ -34,15 +37,17 @@ const chordTypeDefinitions = [
     { name: 'm7b5', type: 'minor', intervals: [0, 3, 6, 10] },
     { name: 'm9b5', type: 'minor', intervals: [0, 3, 6, 10, 14] },
     
-    { name: '7', type: 'dominant', intervals: [0, 4, 7, 10] },
-    { name: '9', type: 'dominant', intervals: [0, 4, 7, 10, 14] },
-    { name: '11', type: 'dominant', intervals: [0, 4, 7, 10, 14, 17] },
-    { name: '13', type: 'dominant', intervals: [0, 4, 7, 10, 14, 21] },
-    { name: '13b9', type: 'dominant', intervals: [0, 4, 7, 10, 13, 21] },
     { name: '7b5', type: 'dominant', intervals: [0, 4, 6, 10] },
+    { name: '7', type: 'dominant', intervals: [0, 4, 7, 10] },
     { name: '7#5', type: 'dominant', intervals: [0, 4, 8, 10] },
     { name: '7b9', type: 'dominant', intervals: [0, 4, 7, 10, 13] },
+    { name: '9b5', type: 'dominant', intervals: [0, 4, 6, 10, 14] },
+    { name: '9', type: 'dominant', intervals: [0, 4, 7, 10, 14] },
     { name: '7#9', type: 'dominant', intervals: [0, 4, 7, 10, 15] },
+    { name: '11', type: 'dominant', intervals: [0, 4, 7, 10, 14, 17] },
+    { name: '9#11', type: 'dominant', intervals: [0, 4, 7, 10, 14, 18] },
+    { name: '13b9', type: 'dominant', intervals: [0, 4, 7, 10, 13, 21] },
+    { name: '13', type: 'dominant', intervals: [0, 4, 7, 10, 14, 21] },
     { name: '7b5b9', type: 'dominant', intervals: [0, 4, 6, 10, 13] },
     { name: '7#5b9', type: 'dominant', intervals: [0, 4, 8, 10, 13] },
     { name: '7#11', type: 'dominant', intervals: [0, 4, 7, 10, 18] },
@@ -50,7 +55,6 @@ const chordTypeDefinitions = [
     
     { name: 'dim', type: 'diminished', intervals: [0, 3, 6] },
     { name: 'dim7', type: 'diminished', intervals: [0, 3, 6, 9] },
-    { name: 'm7b5', type: 'diminished', intervals: [0, 3, 6, 10] },
     
     { name: 'aug', type: 'augmented', intervals: [0, 4, 8] },
     { name: 'aug7', type: 'augmented', intervals: [0, 4, 8, 10] },
@@ -73,6 +77,8 @@ chordTypeDefinitions.forEach(def => {
     chordIntervals[def.name] = def.intervals;
     chordTypes[def.name] = def.type;
 });
+
+const notes = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B'];
 
 const noteToMidi = {
     'C': 60, 'Db': 61,
@@ -132,6 +138,8 @@ window.onload = () => {
         const chordContainer = createChordContainer(chord, index);
         grid.appendChild(chordContainer);
     });
+    
+    updateAllChordColors();
     
     Object.values(synthTypes).forEach(synth => {
         synth.volume.value = -12;
@@ -486,10 +494,26 @@ function getChordType(quality) {
 }
 
 function isStrongProgression(currentRoot, prevRoot) {
-    const notes = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B'];
     const currentIndex = notes.indexOf(currentRoot);
     const prevIndex = notes.indexOf(prevRoot);
     return ((prevIndex + 5) % 12 === currentIndex);
+}
+
+function isSubstituteRoot(currentRoot, prevRoot) {
+    const currentIndex = notes.indexOf(currentRoot);
+    const prevIndex = notes.indexOf(prevRoot);
+    return ((prevIndex + 6) % 12 === currentIndex);
+}
+
+function updateChordProgressionColors(rootSelect, prevRoot) {
+    Array.from(rootSelect.options).forEach(option => {
+        option.style.color = '';
+        if (isStrongProgression(option.value, prevRoot)) {
+            option.style.color = '#ffeb3b';
+        } else if (isSubstituteRoot(option.value, prevRoot)) {
+            option.style.color = '#ff9800';
+        }
+    });
 }
 
 function createChordSelector(index) {
@@ -516,14 +540,6 @@ function createChordSelector(index) {
         option.textContent = note;
         if (note === root) {
             option.selected = true;
-        }
-
-        if (index > 0) {
-            const prevChord = chordProgression[index - 1];
-            const prevRoot = parseChord(prevChord).root;
-            if (isStrongProgression(note, prevRoot)) {
-                option.style.color = '#ffeb3b';
-            }
         }
         rootSelect.appendChild(option);
     });
@@ -574,6 +590,7 @@ function createChordSelector(index) {
         }
         chordProgression[index] = newChord;
         updateChordDisplay(index, newChord);
+        updateAllChordColors();
     };
 
     rootSelect.onchange = updateChord;
@@ -586,6 +603,31 @@ function createChordSelector(index) {
     container.appendChild(randomButton);
 
     return container;
+}
+
+function updateAllChordColors() {
+    const containers = document.getElementsByClassName('chord-container');
+    Array.from(containers).forEach((container, index) => {
+        if (index > 0) {
+            const chordSelector = container.querySelector('.chord-selector');
+            const rootSelect = chordSelector.querySelector('select:first-child');
+            const prevChord = chordProgression[index - 1];
+            const prevRoot = parseChord(prevChord).root;
+            updateChordProgressionColors(rootSelect, prevRoot);
+        }
+    });
+}
+
+function updateChordGrid() {
+    const grid = document.getElementById('chordGrid');
+    grid.innerHTML = '';
+    
+    chordProgression.forEach((chord, index) => {
+        const chordContainer = createChordContainer(chord, index);
+        grid.appendChild(chordContainer);
+    });
+    
+    updateAllChordColors();
 }
 
 function findClosestChordQuality(intervals) {
@@ -822,16 +864,6 @@ function createChordContainer(chord, index) {
     chordContainer.appendChild(createChordSelector(index));
     
     return chordContainer;
-}
-
-function updateChordGrid() {
-    const grid = document.getElementById('chordGrid');
-    grid.innerHTML = '';
-    
-    chordProgression.forEach((chord, index) => {
-        const chordContainer = createChordContainer(chord, index);
-        grid.appendChild(chordContainer);
-    });
 }
 
 function getChordNotes(chord) {
