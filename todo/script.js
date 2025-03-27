@@ -35,6 +35,9 @@ function renderItems() {
     const sortedItems = filteredItems.sort((a, b) => {
         const order = a.checked ? -1 : 1;
         if (a.checked !== b.checked) return order;
+        if (a.checked && b.checked) {
+            return a.priority - b.priority;
+        }
         return (new Date(b.lastDone) - new Date(a.lastDone)) * order;
     });
 
@@ -71,7 +74,8 @@ function addItem() {
             name: input.value.trim(),
             category: currentCategory,
             checked: true,
-            lastDone: new Date().toISOString()
+            lastDone: new Date().toISOString(),
+            priority: 10
         });
         saveItems();
         renderItems();
@@ -88,7 +92,9 @@ function handleItemClick(id) {
     selectedItemId = id;
     const item = items.find(item => item.id === id);
     const editInput = $el('editInput');
+    const priorityInput = $el('priorityInput');
     editInput.value = item.name;
+    priorityInput.value = item.priority || 10;
     showModal('editModal');
     editInput.focus();
     editInput.select();
@@ -96,9 +102,11 @@ function handleItemClick(id) {
 
 function updateItem() {
     const editInput = $el('editInput');
+    const priorityInput = $el('priorityInput');
     const item = items.find(item => item.id === selectedItemId);
     if (editInput.value.trim() && item) {
         item.name = editInput.value.trim();
+        item.priority = parseFloat(priorityInput.value) || item.priority;
         saveItems();
         renderItems();
         closeModal('editModal');
