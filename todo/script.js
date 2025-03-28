@@ -29,6 +29,15 @@ function adjustContainerHeight() {
     container.style.height = `${minHeight}px`;
 }
 
+function updateTabIndicators() {
+    const tabs = document.querySelectorAll('.tab');
+    tabs.forEach(tab => {
+        const category = tab.textContent;
+        const hasChecked = items.some(item => item.category === category && item.checked);
+        tab.classList.toggle('has-checked', hasChecked);
+    });
+}
+
 function renderItems() {
     const itemList = $el('itemList');
     const filteredItems = items.filter(item => item.category === currentCategory);
@@ -55,6 +64,7 @@ function renderItems() {
         </div>
     `).join('');
 
+    updateTabIndicators();
     setTimeout(adjustContainerHeight, 0);
 }
 
@@ -81,6 +91,12 @@ function addItem() {
         renderItems();
         input.value = '';
         closeModal('addModal');
+    }
+}
+
+function handleAddModalKeyPress(event) {
+    if (event.key === 'Enter') {
+        addItem();
     }
 }
 
@@ -168,19 +184,26 @@ function initializeApp() {
         input.focus();
     };
 
+    $el('itemInput').addEventListener('keypress', handleAddModalKeyPress);
+
     let touchStartX = 0;
+    let touchStartY = 0;
+
     document.addEventListener('touchstart', e => {
         touchStartX = e.touches[0].clientX;
+        touchStartY = e.touches[0].clientY;
     });
 
     document.addEventListener('touchend', e => {
         const touchEndX = e.changedTouches[0].clientX;
-        const diff = touchEndX - touchStartX;
+        const touchEndY = e.changedTouches[0].clientY;
+        const diffX = touchEndX - touchStartX;
+        const diffY = touchEndY - touchStartY; 
         const tabs = Array.from(document.querySelectorAll('.tab'));
         const currentIndex = tabs.findIndex(tab => tab.classList.contains('active'));
         
-        if (Math.abs(diff) > 50) {
-            let newIndex = diff > 0 ? currentIndex - 1 : currentIndex + 1;
+        if (Math.abs(diffX) > 50 && Math.abs(diffY) < 50) {
+            let newIndex = diffX > 0 ? currentIndex - 1 : currentIndex + 1;
             if (newIndex >= 0 && newIndex < tabs.length) {
                 tabs[currentIndex].classList.remove('active');
                 tabs[newIndex].classList.add('active');
