@@ -43,8 +43,9 @@ function renderItems() {
     const filteredItems = items.filter(item => item.category === currentCategory);
     const sortedItems = filteredItems.sort((a, b) => {
         const order = a.checked ? -1 : 1;
-        if (a.checked !== b.checked) return order;
-        if (a.checked && b.checked) {
+        if (a.checked !== b.checked) {
+            return order;
+        } else if (a.priority !== b.priority) {
             return a.priority - b.priority;
         }
         return (new Date(b.lastDone) - new Date(a.lastDone)) * order;
@@ -154,11 +155,13 @@ function deleteItem() {
 function showModal(id) {
     $el(id).style.display = 'block';
     $el('addButton').style.display = 'none';
+    $el('shareButton').style.display = 'none';
 }
 
 function closeModal(id) {
     $el(id).style.display = 'none';
     $el('addButton').style.display = 'block';
+    $el('shareButton').style.display = 'block';
 }
 
 function handleModalOutsideClick(event) {
@@ -177,11 +180,47 @@ function initializeApp() {
         }
     });
 
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            closeModal('editModal');
+            closeModal('addModal');
+        }
+    });
+
     $el('addButton').onclick = () => {
         const input = $el('itemInput');
         input.placeholder = `"${currentCategory}"に追加`;
         showModal('addModal');
         input.focus();
+    };
+
+    $el('shareButton').onclick = async () => {
+        const checkedItems = items.filter(item => item.checked);
+        if (checkedItems.length === 0) return;
+
+        const groupedItems = {};
+        checkedItems.forEach(item => {
+            if (!groupedItems[item.category]) {
+                groupedItems[item.category] = [];
+            }
+            groupedItems[item.category].push(item.name);
+        });
+
+        const text = Object.entries(groupedItems)
+            .map(([category, items]) => `【${category}】\n${items.map(item => `・${item}`).join('\n')}`)
+            .join('\n\n');
+
+        try {
+            await navigator.clipboard.writeText(text);
+            if (navigator.share) {
+                await navigator.share({
+                    text: text
+                });
+            } else {
+                alert('クリップボードにコピーしました');
+            }
+        } catch (err) {
+        }
     };
 
     $el('itemInput').addEventListener('keypress', handleAddModalKeyPress);

@@ -156,6 +156,35 @@ html {
     box-shadow: 0 6px 12px rgba(0,0,0,0.3);
 }
 
+.share-button {
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    transform: none;
+    width: 56px;
+    height: 56px;
+    border-radius: 28px;
+    background: var(--primary-color);
+    color: white;
+    border: none;
+    font-size: 24px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    transition: all 0.3s ease;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.share-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 12px rgba(0,0,0,0.3);
+}
+
+.share-button .material-icons {
+    font-size: 28px;
+}
+
 .modal {
     display: none;
     position: fixed;
