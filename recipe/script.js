@@ -63,6 +63,7 @@ function showRecipe(id) {
         $el('ingredientsDisplay').textContent = item.ingredients || '食材が入力されていません';
         $el('instructionsDisplay').textContent = item.instructions || '調理手順が入力されていません';
         showModal('recipeModal');
+        startSleepPreventVideos();
     }
 }
 
@@ -186,6 +187,11 @@ function closeModal(id) {
     $el(id).style.display = 'none';
     $el('addButton').style.display = 'block';
     $el('shareButton').style.display = 'block';
+    
+    // レシピモーダルを閉じる時は動画も停止
+    if (id === 'recipeModal') {
+        stopSleepPreventVideos();
+    }
 }
 
 function handleModalOutsideClick(event) {
@@ -280,6 +286,30 @@ function initializeApp() {
     window.addEventListener('resize', adjustContainerHeight);
 
     renderItems();
+}
+
+function startSleepPreventVideos() {
+    const iosVideo = $el('sleep-prevent-video-ios');
+    const androidVideo = $el('sleep-prevent-video-android');
+    
+    if (iosVideo) {
+        iosVideo.play().catch(e => console.log('iOS video play failed:', e));
+    }
+    if (androidVideo) {
+        androidVideo.play().catch(e => console.log('Android video play failed:', e));
+    }
+}
+
+function stopSleepPreventVideos() {
+    const iosVideo = $el('sleep-prevent-video-ios');
+    const androidVideo = $el('sleep-prevent-video-android');
+    
+    if (iosVideo) {
+        iosVideo.pause();
+    }
+    if (androidVideo) {
+        androidVideo.pause();
+    }
 }
 
 document.addEventListener('DOMContentLoaded', initializeApp); 

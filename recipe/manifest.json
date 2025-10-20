@@ -1,0 +1,21 @@
+{
+  "name": "レシピツール",
+  "short_name": "レシピ",
+  "description": "レシピ管理アプリ",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#f5f5f5",
+  "theme_color": "#9c66b3",
+  "icons": [
+    {
+      "src": "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTkyIiBoZWlnaHQ9IjE5MiIgdmlld0JveD0iMCAwIDE5MiAxOTIiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIxOTIiIGhlaWdodD0iMTkyIiByeD0iMjQiIGZpbGw9IiM5YzY2YjMiLz4KPHBhdGggZD0iTTQ4IDY0SDE0NFYxMjhINTRWODRINDRWNjRINDRaIiBmaWxsPSJ3aGl0ZSIvPgo8cGF0aCBkPSJNNTQgNzRIMTM0VjExOEg2NFY4NEg1NFY3NFoiIGZpbGw9IiNmNWY1ZjUiLz4KPHBhdGggZD0iTTY0IDg0SDEyNFY5NEg3NFY4NFoiIGZpbGw9IiM5YzY2YjMiLz4KPHBhdGggZD0iTTY0IDEwMEgxMjRWMTEwSDc0VjEwMFoiIGZpbGw9IiM5YzY2YjMiLz4KPHBhdGggZD0iTTY0IDExNkgxMjRWMTI2SDc0VjExNloiIGZpbGw9IiM5YzY2YjMiLz4KPC9zdmc+",
+      "sizes": "192x192",
+      "type": "image/svg+xml"
+    },
+    {
+      "src": "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNTEyIiBoZWlnaHQ9IjUxMiIgdmlld0JveD0iMCAwIDUxMiA1MTIiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSI1MTIiIGhlaWdodD0iNTEyIiByeD0iNjQiIGZpbGw9IiM5YzY2YjMiLz4KPHBhdGggZD0iTTEyOCAxNzBIMzg0VjM0MkgxMzZWMjI0SDEyOFYxNzBaIiBmaWxsPSJ3aGl0ZSIvPgo8cGF0aCBkPSJNMTM2IDE5MEgzNzJWMTE0SDE3MFYxOTBaIiBmaWxsPSIjZjVmNWY1Ii8+CjxwYXRoIGQ9Ik0xNzAgMjI0SDM1MlYyMzRIMjAwVjIyNFoiIGZpbGw9IiM5YzY2YjMiLz4KPHBhdGggZD0iTTE3MCAyNjZIMzUyVjI3NkgyMDBWMjY2WiIgZmlsbD0iIzljNjZiMyIvPgo8cGF0aCBkPSJNMTcwIDMwOEgzNTJWMzE4SDIwMFYzMDhaIiBmaWxsPSIjOWM2NmIzIi8+Cjwvc3ZnPg==",
+      "sizes": "512x512",
+      "type": "image/svg+xml"
+    }
+  ]
+}
