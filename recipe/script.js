@@ -36,24 +36,55 @@ function updateTabIndicators() {
 
 function renderItems() {
     const itemList = $el('itemList');
+    
+    // DOM要素が存在しない場合は処理をスキップ
+    if (!itemList) {
+        console.warn('itemList element not found');
+        return;
+    }
+    
     const filteredItems = items.filter(item => item.category === currentCategory);
     const sortedItems = filteredItems.sort((a, b) => {
         return new Date(b.lastMade) - new Date(a.lastMade);
     });
 
-    itemList.innerHTML = sortedItems.map(item => `
-        <div class="item" onclick="showRecipe('${item.id}')">
-            <span class="item-name">
-                ${item.name}
-            </span>
-            <div class="item-right">
-                <span class="last-date">${formatRelativeTime(item.lastMade)}</span>
+    if (sortedItems.length === 0) {
+        // アイテムが存在しない場合の空状態表示
+        itemList.innerHTML = `
+            <div class="empty-state">
+                <div class="empty-icon">📝</div>
+                <div class="empty-message">まだレシピがありません</div>
+                <div class="empty-submessage">画面下の + ボタンからレシピを追加してください</div>
             </div>
-        </div>
-    `).join('');
+        `;
+    } else {
+        itemList.innerHTML = sortedItems.map(item => `
+            <div class="item" onclick="showRecipe('${item.id}')">
+                <span class="item-name">
+                    ${item.name}
+                </span>
+                <div class="item-right">
+                    <span class="last-date">${formatRelativeTime(item.lastMade)}</span>
+                </div>
+            </div>
+        `).join('');
+    }
 
     updateTabIndicators();
     setTimeout(adjustContainerHeight, 0);
+}
+
+function linkifyUrls(text) {
+    if (!text) return text;
+    
+    // URLの正規表現パターン（http、https、wwwで始まるURLを検出）
+    const urlRegex = /(https?:\/\/[^\s]+|www\.[^\s]+)/g;
+    
+    return text.replace(urlRegex, (url) => {
+        // wwwで始まる場合はhttps://を追加
+        const href = url.startsWith('www.') ? `https://${url}` : url;
+        return `<a href="${href}" target="_blank" rel="noopener noreferrer" class="recipe-link">${url}</a>`;
+    });
 }
 
 function showRecipe(id) {
@@ -61,8 +92,29 @@ function showRecipe(id) {
     if (item) {
         selectedItemId = id;
         $el('recipeTitle').textContent = item.name;
-        $el('ingredientsDisplay').textContent = item.ingredients || '食材が入力されていません';
-        $el('instructionsDisplay').textContent = item.instructions || '調理手順が入力されていません';
+        
+        // 食材と調理手順でURLをリンク化
+        const ingredientsText = item.ingredients || '';
+        const instructionsText = item.instructions || '';
+        
+        // 食材欄の表示/非表示を制御
+        const ingredientsSection = document.querySelector('.recipe-section-display:first-of-type');
+        if (ingredientsText.trim()) {
+            ingredientsSection.style.display = 'block';
+            $el('ingredientsDisplay').innerHTML = linkifyUrls(ingredientsText);
+        } else {
+            ingredientsSection.style.display = 'none';
+        }
+        
+        // 調理手順欄の表示/非表示を制御
+        const instructionsSection = document.querySelector('.recipe-section-display:last-of-type');
+        if (instructionsText.trim()) {
+            instructionsSection.style.display = 'block';
+            $el('instructionsDisplay').innerHTML = linkifyUrls(instructionsText);
+        } else {
+            instructionsSection.style.display = 'none';
+        }
+        
         showModal('recipeModal');
         requestWakeLock();
     }
@@ -181,13 +233,19 @@ function editCurrentRecipe() {
 function showModal(id) {
     $el(id).style.display = 'block';
     $el('addButton').style.display = 'none';
-    $el('shareButton').style.display = 'none';
+    const shareButton = $el('shareButton');
+    if (shareButton) {
+        shareButton.style.display = 'none';
+    }
 }
 
 function closeModal(id) {
     $el(id).style.display = 'none';
     $el('addButton').style.display = 'block';
-    $el('shareButton').style.display = 'block';
+    const shareButton = $el('shareButton');
+    if (shareButton) {
+        shareButton.style.display = 'block';
+    }
     
     // レシピモーダルを閉じる時はWake Lockも解放
     if (id === 'recipeModal') {
@@ -226,34 +284,38 @@ function initializeApp() {
         input.focus();
     };
 
-    $el('shareButton').onclick = async () => {
-        const allItems = items;
-        if (allItems.length === 0) return;
+    // shareButtonが存在する場合のみイベントリスナーを設定
+    const shareButton = $el('shareButton');
+    if (shareButton) {
+        shareButton.onclick = async () => {
+            const allItems = items;
+            if (allItems.length === 0) return;
 
-        const groupedItems = {};
-        allItems.forEach(item => {
-            if (!groupedItems[item.category]) {
-                groupedItems[item.category] = [];
+            const groupedItems = {};
+            allItems.forEach(item => {
+                if (!groupedItems[item.category]) {
+                    groupedItems[item.category] = [];
+                }
+                groupedItems[item.category].push(item.name);
+            });
+
+            const text = Object.entries(groupedItems)
+                .map(([category, items]) => `【${category}】\n${items.map(item => `・${item}`).join('\n')}`)
+                .join('\n\n');
+
+            try {
+                await navigator.clipboard.writeText(text);
+                if (navigator.share) {
+                    await navigator.share({
+                        text: text
+                    });
+                } else {
+                    alert('クリップボードにコピーしました');
+                }
+            } catch (err) {
             }
-            groupedItems[item.category].push(item.name);
-        });
-
-        const text = Object.entries(groupedItems)
-            .map(([category, items]) => `【${category}】\n${items.map(item => `・${item}`).join('\n')}`)
-            .join('\n\n');
-
-        try {
-            await navigator.clipboard.writeText(text);
-            if (navigator.share) {
-                await navigator.share({
-                    text: text
-                });
-            } else {
-                alert('クリップボードにコピーしました');
-            }
-        } catch (err) {
-        }
-    };
+        };
+    }
 
     $el('itemInput').addEventListener('keypress', handleAddModalKeyPress);
 
@@ -298,7 +360,12 @@ function initializeApp() {
         releaseWakeLock();
     });
 
-    renderItems();
+    // DOM要素が確実に読み込まれてからレンダリングを実行
+    setTimeout(() => {
+        console.log('Initializing app with items:', items.length);
+        console.log('Current category:', currentCategory);
+        renderItems();
+    }, 0);
 }
 
 async function requestWakeLock() {

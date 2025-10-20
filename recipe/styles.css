@@ -223,6 +223,8 @@ html {
 
 .recipe-section-display {
     margin-bottom: 20px;
+    display: block;
+    transition: all 0.3s ease;
 }
 
 .section-title {
@@ -359,4 +361,55 @@ html {
 .made-button:hover {
     background: #45a049;
     color: white;
+}
+
+/* レシピ内のリンクスタイル */
+.recipe-link {
+    color: var(--primary-color);
+    text-decoration: underline;
+    text-decoration-color: var(--primary-color);
+    text-underline-offset: 2px;
+    transition: all 0.3s ease;
+    word-break: break-all;
+}
+
+.recipe-link:hover {
+    color: #7a4d8a;
+    text-decoration-color: #7a4d8a;
+    background-color: rgba(156, 102, 179, 0.1);
+    padding: 2px 4px;
+    border-radius: 4px;
+}
+
+/* 空状態のスタイリング */
+.empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 60px 20px;
+    text-align: center;
+    color: #666;
+    background: rgba(255, 255, 255, 0.6);
+    border-radius: 12px;
+    margin: 20px;
+}
+
+.empty-icon {
+    font-size: 4em;
+    margin-bottom: 20px;
+    opacity: 0.7;
+}
+
+.empty-message {
+    font-size: 1.2em;
+    font-weight: bold;
+    margin-bottom: 10px;
+    color: var(--primary-color);
+}
+
+.empty-submessage {
+    font-size: 0.9em;
+    opacity: 0.8;
+    line-height: 1.4;
 }
