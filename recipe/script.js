@@ -2,6 +2,7 @@ let items = JSON.parse(localStorage.getItem('RecipeTool.recipes')) || [];
 let currentCategory = 'メイン';
 let selectedItemId;
 let deleteTimer;
+let wakeLock = null;
 
 const $el = document.getElementById.bind(document);
 
@@ -63,7 +64,7 @@ function showRecipe(id) {
         $el('ingredientsDisplay').textContent = item.ingredients || '食材が入力されていません';
         $el('instructionsDisplay').textContent = item.instructions || '調理手順が入力されていません';
         showModal('recipeModal');
-        startSleepPreventVideos();
+        requestWakeLock();
     }
 }
 
@@ -188,9 +189,9 @@ function closeModal(id) {
     $el('addButton').style.display = 'block';
     $el('shareButton').style.display = 'block';
     
-    // レシピモーダルを閉じる時は動画も停止
+    // レシピモーダルを閉じる時はWake Lockも解放
     if (id === 'recipeModal') {
-        stopSleepPreventVideos();
+        releaseWakeLock();
     }
 }
 
@@ -284,31 +285,45 @@ function initializeApp() {
     });
 
     window.addEventListener('resize', adjustContainerHeight);
+    
+    // ページが非表示になった時やアプリが終了する時にWake Lockを解放
+    document.addEventListener('visibilitychange', () => {
+        if (document.hidden && wakeLock) {
+            releaseWakeLock();
+        }
+    });
+    
+    // ページがアンロードされる時にWake Lockを解放
+    window.addEventListener('beforeunload', () => {
+        releaseWakeLock();
+    });
 
     renderItems();
 }
 
-function startSleepPreventVideos() {
-    const iosVideo = $el('sleep-prevent-video-ios');
-    const androidVideo = $el('sleep-prevent-video-android');
-    
-    if (iosVideo) {
-        iosVideo.play().catch(e => console.log('iOS video play failed:', e));
-    }
-    if (androidVideo) {
-        androidVideo.play().catch(e => console.log('Android video play failed:', e));
+async function requestWakeLock() {
+    try {
+        if ('wakeLock' in navigator) {
+            wakeLock = await navigator.wakeLock.request('screen');
+            console.log('Wake Lock acquired');
+            
+            wakeLock.addEventListener('release', () => {
+                console.log('Wake Lock released');
+                wakeLock = null;
+            });
+        } else {
+            console.log('Wake Lock API not supported');
+        }
+    } catch (err) {
+        console.log('Wake Lock failed:', err);
     }
 }
 
-function stopSleepPreventVideos() {
-    const iosVideo = $el('sleep-prevent-video-ios');
-    const androidVideo = $el('sleep-prevent-video-android');
-    
-    if (iosVideo) {
-        iosVideo.pause();
-    }
-    if (androidVideo) {
-        androidVideo.pause();
+function releaseWakeLock() {
+    if (wakeLock) {
+        wakeLock.release();
+        wakeLock = null;
+        console.log('Wake Lock released manually');
     }
 }
 
