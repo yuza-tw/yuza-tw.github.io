@@ -3,8 +3,32 @@ let currentCategory = 'メイン';
 let selectedItemId;
 let deleteTimer;
 let wakeLock = null;
+let isModalOpen = false;
 
 const $el = document.getElementById.bind(document);
+
+// モーダル表示時のスクロール防止関数
+function preventScroll(e) {
+    // モーダル内の要素に対するタッチイベントは許可
+    const target = e.target;
+    const modal = target.closest('.modal');
+    if (modal) {
+        return; // モーダル内の要素の場合は何もしない
+    }
+    
+    // ボタンや入力要素に対するタッチイベントは許可
+    if (target.tagName === 'BUTTON' || 
+        target.tagName === 'INPUT' || 
+        target.tagName === 'TEXTAREA' ||
+        target.closest('button') ||
+        target.closest('input') ||
+        target.closest('textarea')) {
+        return;
+    }
+    
+    // その他の要素の場合はスクロールを防止
+    e.preventDefault();
+}
 
 function formatRelativeTime(dateString) {
     const date = new Date(dateString);
@@ -237,6 +261,19 @@ function showModal(id) {
     if (shareButton) {
         shareButton.style.display = 'none';
     }
+    
+    // モーダルが開いている状態を記録
+    isModalOpen = true;
+    
+    // 背景のスクロールとタッチイベントを無効化
+    document.body.style.overflow = 'hidden';
+    document.body.style.position = 'fixed';
+    document.body.style.width = '100%';
+    document.body.style.height = '100%';
+    
+    // タッチイベントの伝播を防ぐ
+    document.addEventListener('touchmove', preventScroll, { passive: false });
+    document.addEventListener('touchstart', preventScroll, { passive: false });
 }
 
 function closeModal(id) {
@@ -246,6 +283,19 @@ function closeModal(id) {
     if (shareButton) {
         shareButton.style.display = 'block';
     }
+    
+    // モーダルが閉じている状態を記録
+    isModalOpen = false;
+    
+    // 背景のスクロールとタッチイベントを再有効化
+    document.body.style.overflow = '';
+    document.body.style.position = '';
+    document.body.style.width = '';
+    document.body.style.height = '';
+    
+    // タッチイベントリスナーを削除
+    document.removeEventListener('touchmove', preventScroll);
+    document.removeEventListener('touchstart', preventScroll);
     
     // レシピモーダルを閉じる時はWake Lockも解放
     if (id === 'recipeModal') {
@@ -328,6 +378,11 @@ function initializeApp() {
     });
 
     document.addEventListener('touchend', e => {
+        // モーダルが開いている場合はタブ切り替えを無効化
+        if (isModalOpen) {
+            return;
+        }
+        
         const touchEndX = e.changedTouches[0].clientX;
         const touchEndY = e.changedTouches[0].clientY;
         const diffX = touchEndX - touchStartX;
