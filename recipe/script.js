@@ -194,12 +194,22 @@ function displayHistory(item) {
         // 履歴を新しい順にソート
         const sortedHistory = [...history].sort((a, b) => new Date(b) - new Date(a));
         
-        historyDisplay.innerHTML = sortedHistory.map(dateString => {
+        historyDisplay.innerHTML = sortedHistory.map((dateString, index) => {
             const daysSince = getDaysSinceString(dateString);
             const formattedDate = formatDate(dateString);
+            // 日付をYYYY-MM-DD形式に変換
+            const date = new Date(dateString);
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            const dateValue = `${year}-${month}-${day}`;
+            
             return `
                 <div class="history-item">
-                    <span class="history-date">${formattedDate}</span>
+                    <input type="date" 
+                           class="history-date-input" 
+                           value="${dateValue}" 
+                           onchange="updateHistoryDate('${dateString}', this.value, ${index})">
                     <span class="history-days">${daysSince}</span>
                 </div>
             `;
@@ -220,6 +230,38 @@ function updateMadeButton(item) {
         madeButton.textContent = '作ってない';
     } else {
         madeButton.textContent = '作った';
+    }
+}
+
+function updateHistoryDate(oldDateString, newDateValue, index) {
+    const item = items.find(item => item.id === selectedItemId);
+    if (!item || !item.history) return;
+    
+    try {
+        // 新しい日付をISO文字列に変換
+        const newDate = new Date(newDateValue + 'T00:00:00.000Z');
+        
+        if (isNaN(newDate.getTime())) {
+            alert('無効な日付です。');
+            return;
+        }
+        
+        // 履歴を新しい順にソート
+        const sortedHistory = [...item.history].sort((a, b) => new Date(b) - new Date(a));
+        
+        // 選択された履歴を更新
+        if (index >= 0 && index < sortedHistory.length) {
+            sortedHistory[index] = newDate.toISOString();
+            item.history = sortedHistory;
+            
+            saveItems();
+            renderItems();
+            displayHistory(item);
+            updateMadeButton(item);
+        }
+    } catch (error) {
+        console.warn('Error updating history date:', error);
+        alert('日付の更新に失敗しました。');
     }
 }
 

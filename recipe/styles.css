@@ -447,6 +447,19 @@ html {
     color: var(--text-color);
 }
 
+.history-date-input {
+    border: 0px;
+    font-size: 1.1em;
+    color: var(--text-color);
+    min-width: 120px;
+}
+
+.history-date-input:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 2px rgba(156, 102, 179, 0.2);
+}
+
 .history-days {
     color: #888;
 }
