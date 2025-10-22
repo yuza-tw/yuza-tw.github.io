@@ -5,6 +5,20 @@ let deleteTimer;
 let wakeLock = null;
 let isModalOpen = false;
 
+// 既存のレシピに履歴データを初期化
+function initializeHistoryData() {
+    let hasChanges = false;
+    items.forEach(item => {
+        if (!item.history) {
+            item.history = [];
+            hasChanges = true;
+        }
+    });
+    if (hasChanges) {
+        saveItems();
+    }
+}
+
 const $el = document.getElementById.bind(document);
 
 // モーダル表示時のスクロール防止関数
@@ -30,20 +44,30 @@ function preventScroll(e) {
     e.preventDefault();
 }
 
-function formatRelativeTime(dateString) {
+function formatDate(dateString) {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('ja-JP', {
+        year: 'numeric',
+        month: 'numeric',
+        day: 'numeric'
+    });
+}
+
+function getDaysSinceString(dateString) {
     const date = new Date(dateString);
     const now = new Date();
     const diff = now - date;
-    const minutes = Math.floor(diff / 60000);
-    const hours = Math.floor(diff / 3600000);
-    const days = Math.floor(diff / 86400000);
-    const months = Math.floor(days / 30);
 
-    if (minutes < 1) return 'たった今';
-    if (minutes < 60) return `${minutes}分前`;
-    if (hours < 24) return `${hours}時間前`;
+    const days = Math.floor(diff / 86400000);
+    if (days == 0) return `今日`;
     if (days < 30) return `${days}日前`;
-    return `${months}ヶ月前`;
+    return `${Math.floor(days / 30)}ヶ月前`;
+}
+
+function isToday(dateString) {
+    const date = new Date(dateString);
+    const today = new Date();
+    return date.toDateString() === today.toDateString();
 }
 
 function adjustContainerHeight() {
@@ -69,7 +93,14 @@ function renderItems() {
     
     const filteredItems = items.filter(item => item.category === currentCategory);
     const sortedItems = filteredItems.sort((a, b) => {
-        return new Date(b.lastMade) - new Date(a.lastMade);
+        // 履歴がある場合は最新の履歴日でソート、ない場合は最後にソート
+        const aLatestDate = a.history && a.history.length > 0 
+            ? Math.max(...a.history.map(date => new Date(date)))
+            : new Date(0); // 1970年1月1日（履歴がない場合は最後にソート）
+        const bLatestDate = b.history && b.history.length > 0 
+            ? Math.max(...b.history.map(date => new Date(date)))
+            : new Date(0);
+        return bLatestDate - aLatestDate;
     });
 
     if (sortedItems.length === 0) {
@@ -82,16 +113,19 @@ function renderItems() {
             </div>
         `;
     } else {
-        itemList.innerHTML = sortedItems.map(item => `
-            <div class="item" onclick="showRecipe('${item.id}')">
-                <span class="item-name">
-                    ${item.name}
-                </span>
-                <div class="item-right">
-                    <span class="last-date">${formatRelativeTime(item.lastMade)}</span>
+        itemList.innerHTML = sortedItems.map(item => {
+            // 履歴がある場合は最新の履歴日を表示、ない場合は「-」を表示
+            const displayTime = item.history && item.history.length > 0 
+                ? getDaysSinceString(new Date(Math.max(...item.history.map(date => new Date(date)))).toISOString())
+                : '-';
+            
+            return `
+                <div class="item" onclick="showRecipe('${item.id}')">
+                    <span class="item-name">${item.name}</span>
+                    <div class="item-right"><span class="last-date">${displayTime}</span></div>
                 </div>
-            </div>
-        `).join('');
+            `;
+        }).join('');
     }
 
     updateTabIndicators();
@@ -139,18 +173,91 @@ function showRecipe(id) {
             instructionsSection.style.display = 'none';
         }
         
+        // 履歴を表示
+        displayHistory(item);
+        
+        // 作ったボタンの表示を更新
+        updateMadeButton(item);
+        
         showModal('recipeModal');
         requestWakeLock();
+    }
+}
+
+function displayHistory(item) {
+    const historyDisplay = $el('historyDisplay');
+    const history = item.history || [];
+    
+    if (history.length === 0) {
+        historyDisplay.innerHTML = '<div class="no-history">履歴がありません</div>';
+    } else {
+        // 履歴を新しい順にソート
+        const sortedHistory = [...history].sort((a, b) => new Date(b) - new Date(a));
+        
+        historyDisplay.innerHTML = sortedHistory.map(dateString => {
+            const daysSince = getDaysSinceString(dateString);
+            const formattedDate = formatDate(dateString);
+            return `
+                <div class="history-item">
+                    <span class="history-date">${formattedDate}</span>
+                    <span class="history-days">${daysSince}</span>
+                </div>
+            `;
+        }).join('');
+    }
+}
+
+function updateMadeButton(item) {
+    const madeButton = document.querySelector('.made-button');
+    if (!madeButton) return;
+    
+    const todayDate = new Date().toDateString();
+    const hasTodayHistory = item.history && item.history.some(dateString => 
+        new Date(dateString).toDateString() === todayDate
+    );
+    
+    if (hasTodayHistory) {
+        madeButton.textContent = '作ってない';
+    } else {
+        madeButton.textContent = '作った';
     }
 }
 
 function markAsMade() {
     const item = items.find(item => item.id === selectedItemId);
     if (item) {
-        item.lastMade = new Date().toISOString();
+        const today = new Date().toISOString();
+        const todayDate = new Date().toDateString();
+        
+        // 履歴を初期化（存在しない場合）
+        if (!item.history) {
+            item.history = [];
+        }
+        
+        // 今日の履歴があるかチェック
+        const hasTodayHistory = item.history.some(dateString => 
+            new Date(dateString).toDateString() === todayDate
+        );
+        
+        if (hasTodayHistory) {
+            // 今日の履歴がある場合は削除
+            item.history = item.history.filter(dateString => 
+                new Date(dateString).toDateString() !== todayDate
+            );
+        } else {
+            // 今日の履歴がない場合は追加
+            item.history.push(today);
+        }
+        
+        
         saveItems();
         renderItems();
-        closeModal('recipeModal');
+        
+        // 履歴表示を更新
+        displayHistory(item);
+        
+        // 作ったボタンの表示を更新
+        updateMadeButton(item);
     }
 }
 
@@ -165,7 +272,7 @@ function addItem() {
             ingredients: ingredientsInput.value.trim(),
             instructions: instructionsInput.value.trim(),
             category: currentCategory,
-            lastMade: new Date().toISOString()
+            history: []
         });
         saveItems();
         renderItems();
@@ -419,6 +526,7 @@ function initializeApp() {
     setTimeout(() => {
         console.log('Initializing app with items:', items.length);
         console.log('Current category:', currentCategory);
+        initializeHistoryData();
         renderItems();
     }, 0);
 }

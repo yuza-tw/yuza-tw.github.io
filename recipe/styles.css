@@ -413,3 +413,46 @@ html {
     opacity: 0.8;
     line-height: 1.4;
 }
+
+/* 履歴表示のスタイリング */
+.recipe-history {
+    margin: 20px 0;
+    display: block;
+    transition: all 0.3s ease;
+}
+
+.history-content {
+    background: rgba(255, 255, 255, 0.8);
+    padding: 15px;
+    border-radius: 8px;
+    margin-bottom: 10px;
+    border: 1px solid rgba(0,0,0,0.1);
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.history-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0;
+    border-bottom: 1px solid rgba(0,0,0,0.1);
+}
+
+.history-item:last-child {
+    border-bottom: none;
+}
+
+.history-date {
+    color: var(--text-color);
+}
+
+.history-days {
+    color: #888;
+}
+
+.no-history {
+    text-align: center;
+    color: #888;
+    font-style: italic;
+}
