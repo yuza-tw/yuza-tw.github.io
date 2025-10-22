@@ -451,6 +451,7 @@ html {
     color: var(--text-color);
     background: rgba(255, 255, 255, 0.8);
     border: 0px;
+    font-size: 1.1em;
 }
 
 .history-date-input:focus {
