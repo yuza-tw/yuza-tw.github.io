@@ -448,10 +448,9 @@ html {
 }
 
 .history-date-input {
-    border: 0px;
-    font-size: 1.1em;
     color: var(--text-color);
-    min-width: 120px;
+    background: rgba(255, 255, 255, 0.8);
+    border: 0px;
 }
 
 .history-date-input:focus {
